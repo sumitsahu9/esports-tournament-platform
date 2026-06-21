@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: #07070a;
+    --foreground: #f3f4f6;
+    --card: rgba(13, 13, 22, 0.7);
+    --card-border: rgba(147, 51, 234, 0.15);
+    --primary: #9333ea;
+    --primary-glow: rgba(147, 51, 234, 0.25);
+    --secondary: #06b6d4;
+    --secondary-glow: rgba(6, 182, 212, 0.25);
+    --accent: #ec4899;
+    --muted: #9ca3af;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07070a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #181824;
+  border-radius: 4px;
+  border: 1px solid rgba(147, 51, 234, 0.1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9333ea;
+}
+
+/* Premium Animations & Effects */
+.bg-grid-pattern {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(147, 51, 234, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(147, 51, 234, 0.04) 1px, transparent 1px);
+}
+
+.text-glow-purple {
+  text-shadow: 0 0 10px rgba(147, 51, 234, 0.6), 0 0 20px rgba(147, 51, 234, 0.3);
+}
+
+.text-glow-cyan {
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6), 0 0 20px rgba(6, 182, 212, 0.3);
+}
+
+.border-glow-purple {
+  box-shadow: 0 0 15px rgba(147, 51, 234, 0.2);
+  border-color: rgba(147, 51, 234, 0.5);
+}
+
+.border-glow-cyan {
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+  border-color: rgba(6, 182, 212, 0.5);
+}
+
+/* Glassmorphism Panel */
+.glass-panel {
+  background: rgba(10, 10, 18, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-panel-purple {
+  background: rgba(12, 8, 25, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(147, 51, 234, 0.25);
+}
+
+.glass-panel-cyan {
+  background: rgba(8, 16, 25, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+}
+
+/* Gradient Texts */
+.text-gradient-purple-cyan {
+  background: linear-gradient(135deg, #c084fc 0%, #a855f7 40%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-cyan-blue {
+  background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 50%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Timeline vertical line glow */
+.timeline-line-glow {
+  box-shadow: 0 0 8px rgba(147, 51, 234, 0.5);
+}
+
+/* Tickers and active pulses */
+.pulse-cyan {
+  box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7);
+  animation: pulse-cyan 2s infinite;
+}
+
+@keyframes pulse-cyan {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(6, 182, 212, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
+  }
+}
+
+/* Premium Cyber Gaming Background */
+.premium-cyber-bg {
+  background-color: #050508;
+  position: relative;
+  z-index: 0;
+}
+
+/* GPU-accelerated fixed background layers for smooth 60fps/120fps scrolling */
+.premium-cyber-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: 
+    /* Darkening overlay gradient */
+    linear-gradient(rgba(5, 5, 8, 0.50), rgba(7, 7, 10, 0.62)),
+    /* Glowing highlights */
+    radial-gradient(circle at 10% 10%, rgba(147, 51, 234, 0.15) 0%, transparent 45%),
+    radial-gradient(circle at 90% 20%, rgba(6, 182, 212, 0.12) 0%, transparent 40%),
+    /* Tech Dot-Matrix print texture */
+    radial-gradient(rgba(147, 51, 234, 0.08) 1.5px, transparent 1.5px),
+    /* Main gameplay background image */
+    url('/controller_bg.png');
+  background-size: 
+    100% 100%, 
+    100% 100%, 100% 100%,
+    32px 32px,
+    cover;
+  background-position: 
+    0 0, 
+    0 0, 0 0,
+    0 0,
+    left center;
+  background-repeat:
+    no-repeat,
+    no-repeat, no-repeat,
+    repeat,
+    no-repeat;
+  pointer-events: none;
+  z-index: -2;
+  transform: translate3d(0, 0, 0); /* GPU acceleration */
+  will-change: transform;
+}
+
+/* Scanline printed overlay overlaying background but behind content */
+.premium-cyber-bg::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  opacity: 0.25;
+  z-index: -1;
+  transform: translate3d(0, 0, 0); /* GPU acceleration */
+  will-change: transform;
+}
