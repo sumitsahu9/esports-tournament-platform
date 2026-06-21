@@ -26,6 +26,9 @@ export default function LoginPage() {
 
     try {
       if (isMockEnabled) {
+        if (email.toLowerCase() === 'sumit903970@gmail.com' && password !== '9039709836#') {
+          throw new Error('Invalid email or password');
+        }
         await loginMockUser(email);
         router.push('/dashboard');
         return;

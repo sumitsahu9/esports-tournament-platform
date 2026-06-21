@@ -909,7 +909,7 @@ export default function AdminPanelPage() {
 
   // Verify Admin
   useEffect(() => {
-    if (!loading && (!user || !profile?.is_admin)) {
+    if (!loading && (!user || user.email?.toLowerCase() !== 'sumit903970@gmail.com' || !profile?.is_admin)) {
       router.push('/');
     }
   }, [user, profile, loading]);

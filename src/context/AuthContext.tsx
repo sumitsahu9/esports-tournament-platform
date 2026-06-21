@@ -58,9 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const prof = profilesMap[targetId];
       if (prof) {
         // Force admin check for the administrator email
-        if (prof.email.toLowerCase() === 'sumit903970@gmail.com') {
-          prof.is_admin = true;
+        const isSuperAdminEmail = prof.email.toLowerCase() === 'sumit903970@gmail.com';
+        prof.is_admin = isSuperAdminEmail;
+        if (isSuperAdminEmail) {
           prof.role = 'Super Admin';
+        } else if (prof.role === 'Super Admin' || prof.role === 'Tournament Admin' || prof.role === 'Support Admin' || prof.role === 'Moderator') {
+          prof.role = 'Player';
         }
         setProfile(prof);
       }
@@ -78,9 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error fetching profile:', error);
       } else {
         const profileData = data as UserProfile;
-        if (profileData.email.toLowerCase() === 'sumit903970@gmail.com') {
-          profileData.is_admin = true;
+        const isSuperAdminEmail = profileData.email.toLowerCase() === 'sumit903970@gmail.com';
+        profileData.is_admin = isSuperAdminEmail;
+        if (isSuperAdminEmail) {
           profileData.role = 'Super Admin';
+        } else if (profileData.role === 'Super Admin' || profileData.role === 'Tournament Admin' || profileData.role === 'Support Admin' || profileData.role === 'Moderator') {
+          profileData.role = 'Player';
         }
         setProfile(profileData);
       }
