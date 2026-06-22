@@ -23,6 +23,8 @@ drop function if exists public.process_withdrawal(uuid, boolean, text) cascade;
 drop function if exists public.confirm_deposit(text, text, numeric) cascade;
 drop function if exists public.admin_confirm_deposit(uuid, text, text, numeric) cascade;
 
+drop table if exists public.leaderboard_overrides cascade;
+drop table if exists public.leaderboard_hidden cascade;
 drop table if exists public.referral_commissions cascade;
 drop table if exists public.referrals cascade;
 drop table if exists public.match_reports cascade;
@@ -353,6 +355,29 @@ create table public.admin_settings (
 -- Seed defaults settings
 insert into public.admin_settings (key, value) values ('min_withdrawal_limit', '100');
 
+-- Leaderboard Overrides Table
+create table public.leaderboard_overrides (
+    id text primary key,
+    username text not null,
+    user_id uuid references auth.users(id) on delete set null,
+    game text not null check (game in ('BGMI', 'Free Fire')),
+    tab text not null check (tab in ('Weekly', 'Monthly', 'All-Time')),
+    wins integer not null default 0 check (wins >= 0),
+    earnings numeric not null default 0 check (earnings >= 0),
+    matches integer not null default 0 check (matches >= 0),
+    avatar text,
+    created_at timestamptz default now()
+);
+
+-- Leaderboard Hidden / Deleted Standings Table
+create table public.leaderboard_hidden (
+    id text primary key,
+    username text not null,
+    game text not null check (game in ('BGMI', 'Free Fire')),
+    tab text not null check (tab in ('Weekly', 'Monthly', 'All-Time')),
+    created_at timestamptz default now()
+);
+
 -- =========================================================================
 -- 3. ENABLE ROW LEVEL SECURITY (RLS) ON ALL TABLES
 -- =========================================================================
@@ -384,6 +409,8 @@ alter table public.referrals enable row level security;
 alter table public.referral_commissions enable row level security;
 alter table public.match_reports enable row level security;
 alter table public.admin_settings enable row level security;
+alter table public.leaderboard_overrides enable row level security;
+alter table public.leaderboard_hidden enable row level security;
 
 -- =========================================================================
 -- 4. CONFIGURE ROW LEVEL SECURITY POLICIES
@@ -498,6 +525,14 @@ create policy "Admins Manage Match Reports" on public.match_reports for all usin
 -- Settings
 create policy "Public Settings Read" on public.admin_settings for select using (true);
 create policy "Admins Manage Settings" on public.admin_settings for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
+
+-- Leaderboard Overrides
+create policy "Public Read Leaderboard Overrides" on public.leaderboard_overrides for select using (true);
+create policy "Admins Manage Leaderboard Overrides" on public.leaderboard_overrides for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
+
+-- Leaderboard Hidden
+create policy "Public Read Leaderboard Hidden" on public.leaderboard_hidden for select using (true);
+create policy "Admins Manage Leaderboard Hidden" on public.leaderboard_hidden for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
 -- =========================================================================
 -- 5. DEFINE DATABASE TRIGGERS
