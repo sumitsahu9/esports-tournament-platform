@@ -6,7 +6,7 @@ let debounceTimer = null;
 const COOLDOWN_MS = 5000; // Wait for 5 seconds of silence before pushing to group saves
 
 console.log('===================================================');
-console.log('  Vortex Esports - Real-Time Live Watcher Started  ');
+console.log('  Mash Arena - Real-Time Live Watcher Started  ');
 console.log('  Monitoring directory for edits...                ');
 console.log('===================================================');
 
