@@ -79,6 +79,11 @@ export default function SignupPage() {
         options: {
           data: {
             name: name,
+            phone_number: phone || null,
+            bgmi_character_id: bgmiCharId || null,
+            bgmi_ign: bgmiIgn || null,
+            freefire_uid: ffUid || null,
+            freefire_ign: ffIgn || null,
           }
         }
       });
@@ -86,21 +91,20 @@ export default function SignupPage() {
       if (error) throw error;
 
       if (data.user) {
-        // 2. Update the profile table with optional details
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            phone_number: phone || null,
-            bgmi_character_id: bgmiCharId || null,
-            bgmi_ign: bgmiIgn || null,
-            freefire_uid: ffUid || null,
-            freefire_ign: ffIgn || null,
-          })
-          .eq('id', data.user.id);
-
-        if (profileError) {
-          console.error('Error updating game profile:', profileError);
-          // Don't throw here, the account was created successfully
+        // 2. Update the profile table with optional details (fallback in case RLS permits)
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              phone_number: phone || null,
+              bgmi_character_id: bgmiCharId || null,
+              bgmi_ign: bgmiIgn || null,
+              freefire_uid: ffUid || null,
+              freefire_ign: ffIgn || null,
+            })
+            .eq('id', data.user.id);
+        } catch (profileError) {
+          console.warn('Fallback update profile warning (handled via trigger):', profileError);
         }
 
         setSuccess(true);

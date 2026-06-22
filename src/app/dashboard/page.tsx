@@ -1129,42 +1129,11 @@ export default function DashboardPage() {
       // Supabase mode
       if (!user) throw new Error('Unauthorized');
 
-      const { data: walletData, error: walletErr } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (walletErr || !walletData) throw new Error('Wallet not found');
-
-      // Create a pending deposit record to be checked by admin manually
-      const { error: depositError } = await supabase
-        .from('deposits')
-        .insert({
-          user_id: user.id,
-          razorpay_order_id: `manual_order_${Date.now()}`,
-          razorpay_payment_id: null,
-          amount: amount,
-          status: 'Pending'
-        });
-      if (depositError) throw depositError;
-
-      // Credit balance instantly in Supabase (manual fallback behavior)
-      const { error: updateWalletError } = await supabase
-        .from('wallets')
-        .update({ deposit_balance: Number(walletData.deposit_balance) + amount })
-        .eq('id', walletData.id);
-      if (updateWalletError) throw updateWalletError;
-
-      const { error } = await supabase
-        .from('transactions')
-        .insert({
-          wallet_id: walletData.id,
-          type: 'Deposit',
-          amount: amount,
-          status: 'Pending',
-          description: `UPI Ref: ${upiReferenceId}`
-        });
+      // Call secure transactional RPC to request manual deposit atomically
+      const { data, error } = await supabase.rpc('request_manual_deposit', {
+        p_amount: amount,
+        p_upi_ref: upiReferenceId
+      });
 
       if (error) throw error;
 

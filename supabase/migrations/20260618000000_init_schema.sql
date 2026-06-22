@@ -22,6 +22,7 @@ drop function if exists public.process_withdrawal(uuid, text, text) cascade;
 drop function if exists public.process_withdrawal(uuid, boolean, text) cascade;
 drop function if exists public.confirm_deposit(text, text, numeric) cascade;
 drop function if exists public.admin_confirm_deposit(uuid, text, text, numeric) cascade;
+drop function if exists public.request_manual_deposit(numeric, text) cascade;
 
 drop table if exists public.leaderboard_overrides cascade;
 drop table if exists public.leaderboard_hidden cascade;
@@ -255,11 +256,10 @@ create table public.team_members (
 create table public.team_invites (
     id uuid default gen_random_uuid() primary key,
     team_id uuid references public.teams(id) on delete cascade not null,
-    inviter_id uuid references auth.users(id) on delete cascade not null,
-    invitee_id uuid references auth.users(id) on delete cascade not null,
+    team_name text not null,
+    invitee_email text not null,
     status text not null default 'Pending' check (status in ('Pending', 'Accepted', 'Declined')),
-    created_at timestamptz default now(),
-    constraint unique_team_invite unique(team_id, invitee_id)
+    created_at timestamptz default now()
 );
 
 -- Coupons Table
@@ -534,6 +534,45 @@ create policy "Admins Manage Leaderboard Overrides" on public.leaderboard_overri
 create policy "Public Read Leaderboard Hidden" on public.leaderboard_hidden for select using (true);
 create policy "Admins Manage Leaderboard Hidden" on public.leaderboard_hidden for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
+-- Audit Logs
+create policy "Admins Read Audit Logs" on public.audit_logs for select using (
+    (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Moderator')
+);
+create policy "Anyone Insert Audit Logs" on public.audit_logs for insert with check (
+    auth.uid() = action_by or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Moderator')
+);
+
+-- Notifications
+create policy "Admins Manage Notifications" on public.notifications for all using (
+    (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Support Admin', 'Moderator')
+);
+
+-- Registrations
+create policy "Players Update Own Registration" on public.registrations for update using (
+    auth.uid() = user_id
+);
+
+-- Team Members
+create policy "Players Join Teams" on public.team_members for insert with check (
+    user_id = auth.uid()
+);
+
+-- Team Invites
+create policy "Players Read Own Team Invites" on public.team_invites for select using (
+    invitee_email = (select email from public.profiles where id = auth.uid())
+);
+create policy "Captains Insert Team Invites" on public.team_invites for insert with check (
+    exists (select 1 from public.teams where id = team_id and captain_id = auth.uid())
+);
+create policy "Invitee Respond Invites" on public.team_invites for update using (
+    invitee_email = (select email from public.profiles where id = auth.uid())
+);
+
+-- Teams
+create policy "Players Create Teams" on public.teams for insert with check (
+    captain_id = auth.uid()
+);
+
 -- =========================================================================
 -- 5. DEFINE DATABASE TRIGGERS
 -- =========================================================================
@@ -542,11 +581,27 @@ create policy "Admins Manage Leaderboard Hidden" on public.leaderboard_hidden fo
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, name, email, is_admin, role)
+  insert into public.profiles (
+    id, 
+    name, 
+    email, 
+    phone_number, 
+    bgmi_character_id, 
+    bgmi_ign, 
+    freefire_uid, 
+    freefire_ign, 
+    is_admin, 
+    role
+  )
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.email,
+    new.raw_user_meta_data->>'phone_number',
+    new.raw_user_meta_data->>'bgmi_character_id',
+    new.raw_user_meta_data->>'bgmi_ign',
+    new.raw_user_meta_data->>'freefire_uid',
+    new.raw_user_meta_data->>'freefire_ign',
     case 
       when new.email = 'sumit903970@gmail.com' then true
       else false
@@ -1154,3 +1209,62 @@ $$ language plpgsql security definer;
 
 -- Revoke function from public execution for webhook security
 revoke execute on function public.admin_confirm_deposit(uuid, text, text, numeric) from public;
+
+-- Function: Request a manual UPI deposit securely (credits instantly, registers pending status for verification)
+create or replace function public.request_manual_deposit(
+  p_amount numeric,
+  p_upi_ref text
+)
+returns json as $$
+declare
+  v_user_id uuid;
+  v_wallet_id uuid;
+  v_deposit_id uuid;
+begin
+  v_user_id := auth.uid();
+  if v_user_id is null then
+    raise exception 'Unauthorized';
+  end if;
+
+  if p_amount <= 0 then
+    raise exception 'Deposit amount must be greater than zero';
+  end if;
+
+  -- 1. Lock and retrieve user's wallet
+  select id into v_wallet_id from public.wallets where user_id = v_user_id for update;
+  if v_wallet_id is null then
+    raise exception 'User wallet not found';
+  end if;
+
+  -- 2. Create pending deposit record
+  insert into public.deposits (user_id, razorpay_order_id, razorpay_payment_id, amount, status)
+  values (
+    v_user_id, 
+    'manual_order_' || (extract(epoch from now()) * 1000)::bigint::text || '_' || floor(random()*1000)::text, 
+    p_upi_ref, 
+    p_amount, 
+    'Pending'
+  )
+  returning id into v_deposit_id;
+
+  -- 3. Credit wallet balance instantly (manual fallback credit behavior)
+  update public.wallets set deposit_balance = deposit_balance + p_amount where id = v_wallet_id;
+
+  -- 4. Create pending transaction log
+  insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
+  values (
+    v_wallet_id,
+    'Deposit',
+    p_amount,
+    'Pending',
+    v_deposit_id,
+    'Manual UPI deposit (UPI Ref: ' || p_upi_ref || ')'
+  );
+
+  return json_build_object(
+    'success', true,
+    'deposit_id', v_deposit_id,
+    'new_deposit_balance', (select deposit_balance from public.wallets where id = v_wallet_id)
+  );
+end;
+$$ language plpgsql security definer;
