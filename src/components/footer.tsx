@@ -117,7 +117,7 @@ export default function Footer() {
         {/* Bottom Legal bar */}
         <div className="border-t border-zinc-900 mt-10 sm:mt-16 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center">
           <p className="text-xs text-zinc-500">
-            &copy; {currentYear} Vortex Esports. All rights reserved. BGMI and Free Fire are trademarks of their respective owners.
+            &copy; {currentYear} VortexPro. All rights reserved. BGMI and Free Fire are trademarks of their respective owners.
           </p>
           <p className="text-xs text-zinc-500 flex items-center justify-center gap-1.5">
             Designed for gamers with <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
