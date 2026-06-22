@@ -469,7 +469,7 @@ export default function TournamentDetailPage() {
     const list = [
       {
         id: 'bgmi-squad-1',
-        title: 'Vortex BGMI Squad Showdown',
+        title: 'Mash Arena BGMI Squad Showdown',
         game: 'BGMI',
         mode: 'Squad',
         entry_fee: 50,
@@ -1075,7 +1075,7 @@ export default function TournamentDetailPage() {
                     required
                     value={ignInput}
                     onChange={(e) => setIgnInput(e.target.value)}
-                    placeholder="e.g. 〆VORTEX・RAPTOR"
+                    placeholder="e.g. 〆MASH・RAPTOR"
                     className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
                   />
                 </div>
@@ -1090,7 +1090,7 @@ export default function TournamentDetailPage() {
                       type="text"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
-                      placeholder="e.g. VORTEX50"
+                      placeholder="e.g. MASH50"
                       className="flex-grow px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-xs text-zinc-100 transition-colors uppercase"
                     />
                     <button
