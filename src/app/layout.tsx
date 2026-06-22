@@ -15,6 +15,9 @@ export const metadata: Metadata = {
     template: '%s | Mash Arena'
   },
   description: 'Join Mash Arena, the leading online tournament platform. Register for daily BGMI and Free Fire matches, showcase your skill, and win real cash payouts directly to your UPI wallet.',
+  verification: {
+    google: 'googlec817a7e72e93722d',
+  },
   keywords: [
     'masharena', 'mash arena', 'Mash arena', 'Mash Arena', 'Mash Arena Esports', 'Mash Arena Tournaments',
     'BGMI Tournaments', 'Free Fire Tournaments', 'Play BGMI Win Cash', 'Free Fire Win Money', 
