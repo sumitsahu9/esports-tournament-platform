@@ -15,8 +15,11 @@ drop function if exists public.handle_new_user() cascade;
 drop function if exists public.auto_update_ticket_status() cascade;
 drop function if exists public.register_for_tournament(uuid, text, text, text) cascade;
 drop function if exists public.declare_winners(uuid, jsonb) cascade;
+drop function if exists public.publish_tournament_results(uuid, uuid, uuid, uuid) cascade;
 drop function if exists public.request_withdrawal(numeric, text) cascade;
+drop function if exists public.submit_withdrawal(numeric, text) cascade;
 drop function if exists public.process_withdrawal(uuid, text, text) cascade;
+drop function if exists public.process_withdrawal(uuid, boolean, text) cascade;
 drop function if exists public.confirm_deposit(text, text, numeric) cascade;
 drop function if exists public.admin_confirm_deposit(uuid, text, text, numeric) cascade;
 
@@ -722,20 +725,19 @@ end;
 $$ language plpgsql security definer;
 
 -- Function: Declare tournament winners and automatically split payouts (50% / 30% / 20%)
-create or replace function public.declare_winners(
+create or replace function public.publish_tournament_results(
   p_tournament_id uuid,
-  p_winners jsonb -- Array format: [{"user_id": "uuid", "rank": 1}, {"user_id": "uuid", "rank": 2}, ...]
+  p_rank1_user_id uuid default null,
+  p_rank2_user_id uuid default null,
+  p_rank3_user_id uuid default null
 )
 returns json as $$
 declare
   v_operator_role text;
   v_prize_pool numeric;
   v_status text;
-  v_winner record;
   v_payout numeric;
   v_wallet_id uuid;
-  v_winner_id uuid;
-  v_winner_rank integer;
   v_winner_row uuid;
 begin
   -- Validate operator role permissions
@@ -757,56 +759,56 @@ begin
     raise exception 'Tournament results have already been finalized and published';
   end if;
 
-  -- Loop through the JSON array elements of winners
-  for v_winner in select * from jsonb_to_recordset(p_winners) as x(user_id uuid, rank integer) loop
-    v_winner_id := v_winner.user_id;
-    v_winner_rank := v_winner.rank;
-
-    -- Validate that user is actually registered for this tournament
-    if not exists (select 1 from public.registrations where tournament_id = p_tournament_id and user_id = v_winner_id) then
-      raise exception 'Winner user ID % is not registered for this tournament', v_winner_id;
+  -- Process Rank 1
+  if p_rank1_user_id is not null then
+    if not exists (select 1 from public.registrations where tournament_id = p_tournament_id and user_id = p_rank1_user_id) then
+      raise exception 'Winner user ID % for Rank 1 is not registered for this tournament', p_rank1_user_id;
     end if;
-
-    -- Calculate payout ratio (Rank 1 = 50%, Rank 2 = 30%, Rank 3 = 20%)
-    if v_winner_rank = 1 then
-      v_payout := round(v_prize_pool * 0.50, 2);
-    elsif v_winner_rank = 2 then
-      v_payout := round(v_prize_pool * 0.30, 2);
-    elsif v_winner_rank = 3 then
-      v_payout := round(v_prize_pool * 0.20, 2);
-    else
-      raise exception 'Invalid winning rank: %', v_winner_rank;
-    end if;
-
-    -- Lock and credit the winner's wallet
-    select id into v_wallet_id from public.wallets where user_id = v_winner_id for update;
+    v_payout := round(v_prize_pool * 0.50, 2);
+    select id into v_wallet_id from public.wallets where user_id = p_rank1_user_id for update;
     update public.wallets set winning_balance = winning_balance + v_payout where id = v_wallet_id;
-
-    -- Add to winners list
     insert into public.winners (tournament_id, user_id, rank, prize_won)
-    values (p_tournament_id, v_winner_id, v_winner_rank, v_payout)
+    values (p_tournament_id, p_rank1_user_id, 1, v_payout)
     returning id into v_winner_row;
-
-    -- Create transaction ledger log
     insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
-    values (
-      v_wallet_id,
-      'Prize Credit',
-      v_payout,
-      'Completed',
-      v_winner_row,
-      'Esports Tournament prize credit for Rank ' || v_winner_rank || ' placement'
-    );
-
-    -- Send notifications to winners
+    values (v_wallet_id, 'Prize Credit', v_payout, 'Completed', v_winner_row, 'Esports Tournament prize credit for Rank 1 placement');
     insert into public.notifications (user_id, title, message, type)
-    values (
-      v_winner_id,
-      'Prize Money Credited!',
-      'Congratulations! You placed Rank ' || v_winner_rank || ' and won ₹' || v_payout || ' winnings credit.',
-      'Prize Earned'
-    );
-  end loop;
+    values (p_rank1_user_id, 'Prize Money Credited!', 'Congratulations! You placed Rank 1 and won ₹' || v_payout || ' winnings credit.', 'Prize Earned');
+  end if;
+
+  -- Process Rank 2
+  if p_rank2_user_id is not null then
+    if not exists (select 1 from public.registrations where tournament_id = p_tournament_id and user_id = p_rank2_user_id) then
+      raise exception 'Winner user ID % for Rank 2 is not registered for this tournament', p_rank2_user_id;
+    end if;
+    v_payout := round(v_prize_pool * 0.30, 2);
+    select id into v_wallet_id from public.wallets where user_id = p_rank2_user_id for update;
+    update public.wallets set winning_balance = winning_balance + v_payout where id = v_wallet_id;
+    insert into public.winners (tournament_id, user_id, rank, prize_won)
+    values (p_tournament_id, p_rank2_user_id, 2, v_payout)
+    returning id into v_winner_row;
+    insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
+    values (v_wallet_id, 'Prize Credit', v_payout, 'Completed', v_winner_row, 'Esports Tournament prize credit for Rank 2 placement');
+    insert into public.notifications (user_id, title, message, type)
+    values (p_rank2_user_id, 'Prize Money Credited!', 'Congratulations! You placed Rank 2 and won ₹' || v_payout || ' winnings credit.', 'Prize Earned');
+  end if;
+
+  -- Process Rank 3
+  if p_rank3_user_id is not null then
+    if not exists (select 1 from public.registrations where tournament_id = p_tournament_id and user_id = p_rank3_user_id) then
+      raise exception 'Winner user ID % for Rank 3 is not registered for this tournament', p_rank3_user_id;
+    end if;
+    v_payout := round(v_prize_pool * 0.20, 2);
+    select id into v_wallet_id from public.wallets where user_id = p_rank3_user_id for update;
+    update public.wallets set winning_balance = winning_balance + v_payout where id = v_wallet_id;
+    insert into public.winners (tournament_id, user_id, rank, prize_won)
+    values (p_tournament_id, p_rank3_user_id, 3, v_payout)
+    returning id into v_winner_row;
+    insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
+    values (v_wallet_id, 'Prize Credit', v_payout, 'Completed', v_winner_row, 'Esports Tournament prize credit for Rank 3 placement');
+    insert into public.notifications (user_id, title, message, type)
+    values (p_rank3_user_id, 'Prize Money Credited!', 'Congratulations! You placed Rank 3 and won ₹' || v_payout || ' winnings credit.', 'Prize Earned');
+  end if;
 
   -- Mark tournament as completed
   update public.tournaments set status = 'Completed' where id = p_tournament_id;
@@ -815,7 +817,7 @@ begin
   insert into public.audit_logs (action_by, action, target_type, target_id, details)
   values (
     auth.uid(),
-    'Declare Winners',
+    'Publish Tournament Results',
     'Tournament',
     p_tournament_id::text,
     'Finalized standings and distributed ₹' || v_prize_pool || ' total prize pool'
@@ -825,8 +827,8 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- Function: Request a withdrawal securely (instantly deducts winnings to prevent double-spending)
-create or replace function public.request_withdrawal(
+-- Function: Submit a withdrawal securely (instantly deducts winnings to prevent double-spending)
+create or replace function public.submit_withdrawal(
   p_amount numeric,
   p_upi_id text
 )
@@ -897,7 +899,7 @@ $$ language plpgsql security definer;
 -- Function: Admin process withdrawals requests (Approve or Reject with instant refunds)
 create or replace function public.process_withdrawal(
   p_withdrawal_id uuid,
-  p_action text, -- 'Approve' or 'Reject'
+  p_approve boolean,
   p_proof_image_url text default null
 )
 returns json as $$
@@ -907,15 +909,12 @@ declare
   v_amount numeric;
   v_status text;
   v_wallet_id uuid;
+  v_log_action text;
 begin
   -- Validate operator permissions
   select role into v_operator_role from public.profiles where id = auth.uid();
   if v_operator_role not in ('Super Admin', 'Moderator') then
     raise exception 'Unauthorized: Only admins or moderators can process withdrawals';
-  end if;
-
-  if p_action not in ('Approve', 'Reject') then
-    raise exception 'Invalid action: Choose Approve or Reject';
   end if;
 
   -- Lock withdrawal request record
@@ -932,7 +931,8 @@ begin
   end if;
 
   -- Handle Approval Action
-  if p_action = 'Approve' then
+  if p_approve = true then
+    v_log_action := 'Approve';
     update public.withdrawals 
     set status = 'Approved', proof_image_url = p_proof_image_url, updated_at = now() 
     where id = p_withdrawal_id;
@@ -953,6 +953,7 @@ begin
 
   -- Handle Rejection Action (issues wallet refund)
   else
+    v_log_action := 'Reject';
     update public.withdrawals 
     set status = 'Rejected', updated_at = now() 
     where id = p_withdrawal_id;
@@ -991,7 +992,7 @@ begin
   insert into public.audit_logs (action_by, action, target_type, target_id, details)
   values (
     auth.uid(),
-    p_action || ' Withdrawal',
+    v_log_action || ' Withdrawal',
     'Withdrawal',
     p_withdrawal_id::text,
     'Processed withdrawal request of ₹' || v_amount
