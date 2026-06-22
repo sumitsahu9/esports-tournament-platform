@@ -34,7 +34,7 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-zinc-100 uppercase tracking-wide">1. Agreement to Terms</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              By accessing and participating in tournaments on Vortex Esports, you agree to comply with and be bound by these Terms of Service. If you do not agree, please do not use our services.
+              By accessing and participating in tournaments on Mash Arena, you agree to comply with and be bound by these Terms of Service. If you do not agree, please do not use our services.
             </p>
           </section>
 
@@ -57,7 +57,7 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-zinc-100 uppercase tracking-wide">4. Fair Play & Anti-Cheat</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              Vortex maintains a strict zero-tolerance policy against hacking, cheating, teaming, emulators, or toxic behavior. Any player caught violating tournament rules will have their account immediately terminated, their slot cancelled without refund, and winnings forfeited.
+              Mash Arena maintains a strict zero-tolerance policy against hacking, cheating, teaming, emulators, or toxic behavior. Any player caught violating tournament rules will have their account immediately terminated, their slot cancelled without refund, and winnings forfeited.
             </p>
             <div className="p-3 bg-red-950/20 border border-red-500/20 rounded-xl flex items-start gap-2.5 text-xs text-red-400">
               <ShieldAlert className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -68,7 +68,7 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-zinc-100 uppercase tracking-wide">5. Limitation of Liability</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              Vortex Esports is not responsible for server crashes, internet disruptions, in-game bugs, or device compatibility issues that might affect your tournament performance.
+              Mash Arena is not responsible for server crashes, internet disruptions, in-game bugs, or device compatibility issues that might affect your tournament performance.
             </p>
           </section>
         </motion.div>
