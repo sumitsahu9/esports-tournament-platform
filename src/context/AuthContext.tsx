@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initAuth = async () => {
       if (isMockEnabled) {
-        const storedUser = localStorage.getItem('vortex_session_user');
+        const storedUser = localStorage.getItem('masharena_session_user');
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
           setUser(parsed);
@@ -207,7 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       created_at: new Date().toISOString()
     } as User;
 
-    localStorage.setItem('vortex_session_user', JSON.stringify(mockUser));
+    localStorage.setItem('masharena_session_user', JSON.stringify(mockUser));
     
     // Check/create profile
     const profilesMap = mockDb.getProfiles();
@@ -247,7 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       created_at: new Date().toISOString()
     } as User;
 
-    localStorage.setItem('vortex_session_user', JSON.stringify(mockUser));
+    localStorage.setItem('masharena_session_user', JSON.stringify(mockUser));
     
     const profilesMap = mockDb.getProfiles();
     profilesMap[id] = {
@@ -275,7 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     if (isMockEnabled) {
-      localStorage.removeItem('vortex_session_user');
+      localStorage.removeItem('masharena_session_user');
       setUser(null);
       setProfile(null);
       setWallet(null);
