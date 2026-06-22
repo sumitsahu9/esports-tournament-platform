@@ -9,7 +9,6 @@ create extension if not exists "uuid-ossp";
 -- =========================================================================
 
 drop trigger if exists on_auth_user_created on auth.users;
-drop trigger if exists on_support_message_inserted on public.support_messages;
 
 drop function if exists public.handle_new_user() cascade;
 drop function if exists public.auto_update_ticket_status() cascade;
@@ -489,9 +488,8 @@ create policy "Members Exit Clans" on public.team_members for delete using (user
 create policy "Captains Manage Members" on public.team_members for all using (
     team_id in (select id from public.teams where captain_id = auth.uid())
 );
-create policy "Read Team Invites" on public.team_invites for select using (invitee_id = auth.uid() or inviter_id = auth.uid());
-create policy "Captains Send Invites" on public.team_invites for insert with check (inviter_id = auth.uid());
-create policy "Invitee Respond Invites" on public.team_invites for all using (invitee_id = auth.uid());
+
+
 
 -- Coupons & Usage
 create policy "Public Read Coupons" on public.coupons for select using (true);
