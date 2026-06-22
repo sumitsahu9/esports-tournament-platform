@@ -44,7 +44,7 @@ export default function RulesPage() {
                 <span className="text-xs font-bold text-red-400">Strictly Banned</span>
               </div>
               <div className="p-3 bg-zinc-900/60 border border-zinc-900 rounded-lg text-center">
-                <span className="block text-[10px] text-zinc-500 uppercase font-black">Vortex Check-In</span>
+                <span className="block text-[10px] text-zinc-500 uppercase font-black">Mash Arena Check-In</span>
                 <span className="text-xs font-bold text-white">Required</span>
               </div>
               <div className="p-3 bg-zinc-900/60 border border-zinc-900 rounded-lg text-center">
