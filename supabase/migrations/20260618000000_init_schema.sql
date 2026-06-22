@@ -527,48 +527,61 @@ create policy "Public Settings Read" on public.admin_settings for select using (
 create policy "Admins Manage Settings" on public.admin_settings for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
 -- Leaderboard Overrides
+drop policy if exists "Public Read Leaderboard Overrides" on public.leaderboard_overrides;
+drop policy if exists "Admins Manage Leaderboard Overrides" on public.leaderboard_overrides;
 create policy "Public Read Leaderboard Overrides" on public.leaderboard_overrides for select using (true);
 create policy "Admins Manage Leaderboard Overrides" on public.leaderboard_overrides for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
 -- Leaderboard Hidden
+drop policy if exists "Public Read Leaderboard Hidden" on public.leaderboard_hidden;
+drop policy if exists "Admins Manage Leaderboard Hidden" on public.leaderboard_hidden;
 create policy "Public Read Leaderboard Hidden" on public.leaderboard_hidden for select using (true);
 create policy "Admins Manage Leaderboard Hidden" on public.leaderboard_hidden for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
 -- Audit Logs
+drop policy if exists "Admins Read Audit Logs" on public.audit_logs;
 create policy "Admins Read Audit Logs" on public.audit_logs for select using (
     (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Moderator')
 );
+drop policy if exists "Anyone Insert Audit Logs" on public.audit_logs;
 create policy "Anyone Insert Audit Logs" on public.audit_logs for insert with check (
     auth.uid() = action_by or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Moderator')
 );
 
 -- Notifications
+drop policy if exists "Admins Manage Notifications" on public.notifications;
 create policy "Admins Manage Notifications" on public.notifications for all using (
     (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Support Admin', 'Moderator')
 );
 
 -- Registrations
+drop policy if exists "Players Update Own Registration" on public.registrations;
 create policy "Players Update Own Registration" on public.registrations for update using (
     auth.uid() = user_id
 );
 
 -- Team Members
+drop policy if exists "Players Join Teams" on public.team_members;
 create policy "Players Join Teams" on public.team_members for insert with check (
     user_id = auth.uid()
 );
 
 -- Team Invites
+drop policy if exists "Players Read Own Team Invites" on public.team_invites;
 create policy "Players Read Own Team Invites" on public.team_invites for select using (
     invitee_email = (select email from public.profiles where id = auth.uid())
 );
+drop policy if exists "Captains Insert Team Invites" on public.team_invites;
 create policy "Captains Insert Team Invites" on public.team_invites for insert with check (
     exists (select 1 from public.teams where id = team_id and captain_id = auth.uid())
 );
+drop policy if exists "Invitee Respond Invites" on public.team_invites;
 create policy "Invitee Respond Invites" on public.team_invites for update using (
     invitee_email = (select email from public.profiles where id = auth.uid())
 );
 
 -- Teams
+drop policy if exists "Players Create Teams" on public.teams;
 create policy "Players Create Teams" on public.teams for insert with check (
     captain_id = auth.uid()
 );
