@@ -757,7 +757,7 @@ export default function DashboardPage() {
         const profilesMap = mockDb.getProfiles();
         const invitee = Object.values(profilesMap).find((p: any) => p.email?.toLowerCase() === inviteEmail.toLowerCase()) as any;
         if (!invitee) {
-          setTeamError('Player with this email not found on Vortex!');
+          setTeamError('Player with this email not found on Mash Arena!');
           setActionLoading(false);
           return;
         }
@@ -812,7 +812,7 @@ export default function DashboardPage() {
         .maybeSingle();
 
       if (searchError || !inviteeProfiles) {
-        setTeamError('Player with this email not found on Vortex!');
+        setTeamError('Player with this email not found on Mash Arena!');
         setActionLoading(false);
         return;
       }
@@ -1011,10 +1011,10 @@ export default function DashboardPage() {
 
         // 2. Open Razorpay checkout popup
         const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_VortexDevDummyKeyId',
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_MashArenaDevDummyKeyId',
           amount: order.amount,
           currency: order.currency,
-          name: 'VORTEX PRO',
+          name: 'MASH ARENA PRO',
           description: `Wallet Deposit (₹${amount})`,
           order_id: order.id,
           handler: async function (response: any) {
@@ -2076,7 +2076,7 @@ export default function DashboardPage() {
                       <div className="p-5 bg-purple-950/10 border border-purple-500/15 rounded-2xl space-y-4">
                         <h4 className="text-xs font-black uppercase text-purple-400 tracking-wider">Invite Player</h4>
                         <p className="text-xs text-zinc-400">
-                          Search for vortex players using their registered email.
+                          Search for Mash Arena players using their registered email.
                         </p>
                         <form onSubmit={handleSendInvite} className="space-y-3">
                           <input
@@ -2114,7 +2114,7 @@ export default function DashboardPage() {
                         required
                         value={newTeamName}
                         onChange={(e) => setNewTeamName(e.target.value)}
-                        placeholder="Team Name (e.g. VORTEX KINGS)"
+                        placeholder="Team Name (e.g. MASH ARENA KINGS)"
                         className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-xs text-zinc-100 transition-colors"
                       />
                       <button
