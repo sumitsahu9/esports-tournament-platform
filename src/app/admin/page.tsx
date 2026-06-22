@@ -3348,7 +3348,7 @@ export default function AdminPanelPage() {
                         <tr key={log.id} className="text-zinc-350 hover:bg-zinc-900/10">
                           <td className="p-4">
                             <div className="font-bold text-zinc-200">{log.profile?.name || 'System'}</div>
-                            <div className="text-[10px] text-zinc-500">{log.profile?.email || 'vortex-system'}</div>
+                            <div className="text-[10px] text-zinc-500">{log.profile?.email || 'masharena-system'}</div>
                           </td>
                           <td className="p-4">
                             <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-zinc-900 text-zinc-350 border border-zinc-800">
@@ -3939,7 +3939,7 @@ export default function AdminPanelPage() {
                     required
                     value={roomPasswordInput}
                     onChange={(e) => setRoomPasswordInput(e.target.value)}
-                    placeholder="e.g. vortex777"
+                    placeholder="e.g. masharena777"
                     className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100"
                   />
                 </div>
