@@ -9,22 +9,22 @@ const outfit = { variable: 'font-outfit' };
 const inter = { variable: 'font-inter' };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://vortexpro.com'),
+  metadataBase: new URL('https://masharena.com'),
   title: {
-    default: 'VortexPro | Play BGMI & Free Fire Tournaments | Win Real Cash',
-    template: '%s | VortexPro'
+    default: 'Mash Arena | Play BGMI & Free Fire Tournaments | Win Real Cash',
+    template: '%s | Mash Arena'
   },
-  description: 'Join VortexPro, the leading online tournament platform. Register for daily BGMI and Free Fire matches, showcase your skill, and win real cash payouts directly to your UPI wallet.',
+  description: 'Join Mash Arena, the leading online tournament platform. Register for daily BGMI and Free Fire matches, showcase your skill, and win real cash payouts directly to your UPI wallet.',
   keywords: [
-    'vortex pro', 'vortexpro', 'bortex', 'bortex pro', 'bortexpro', 'vortex',
+    'masharena', 'mash arena', 'Mash arena', 'Mash Arena', 'Mash Arena Esports', 'Mash Arena Tournaments',
     'BGMI Tournaments', 'Free Fire Tournaments', 'Play BGMI Win Cash', 'Free Fire Win Money', 
-    'Esports India', 'Gaming Tournament App', 'BGMI Custom Rooms', 'VortexPro Tournaments',
+    'Esports India', 'Gaming Tournament App', 'BGMI Custom Rooms',
     'Play and Win Cash Games', 'Indian Esports Platform', 'Online Gaming Earn Money',
     'Free Fire Custom Room match', 'BGMI Daily Tournaments', 'Esports Tournament Platform'
   ],
-  authors: [{ name: 'VortexPro Team' }],
-  creator: 'VortexPro',
-  publisher: 'VortexPro',
+  authors: [{ name: 'Mash Arena Esports Team' }],
+  creator: 'Mash Arena',
+  publisher: 'Mash Arena',
   robots: {
     index: true,
     follow: true,
@@ -41,27 +41,27 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://vortexpro.com',
-    title: 'VortexPro | Play BGMI & Free Fire Tournaments | Win Real Cash',
-    description: 'Join VortexPro, the leading online tournament platform. Register for daily BGMI and Free Fire matches, showcase your skill, and win real cash payouts directly to your UPI wallet.',
-    siteName: 'VortexPro',
+    url: 'https://masharena.com',
+    title: 'Mash Arena | Play BGMI & Free Fire Tournaments | Win Real Cash',
+    description: 'Join Mash Arena, the leading online tournament platform. Register for daily BGMI and Free Fire matches, showcase your skill, and win real cash payouts directly to your UPI wallet.',
+    siteName: 'Mash Arena',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'VortexPro | BGMI & Free Fire Tournament Arena',
+        alt: 'Mash Arena | BGMI & Free Fire Tournament Arena',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'VortexPro | Play BGMI & Free Fire Tournaments | Win Real Cash',
-    description: 'Join VortexPro, the leading online tournament platform. Register for daily BGMI and Free Fire matches, showcase your skill, and win real cash payouts directly to your UPI wallet.',
+    title: 'Mash Arena | Play BGMI & Free Fire Tournaments | Win Real Cash',
+    description: 'Join Mash Arena, the leading online tournament platform. Register for daily BGMI and Free Fire matches, showcase your skill, and win real cash payouts directly to your UPI wallet.',
     images: ['/og-image.png'],
   },
   alternates: {
-    canonical: 'https://vortexpro.com',
+    canonical: 'https://masharena.com',
   },
 };
 

@@ -131,7 +131,7 @@ export default function Navbar() {
           <div className="flex-shrink-0">
             <Link href="/" className="flex items-center gap-2">
               <span className="text-xl sm:text-2xl font-black tracking-wider text-gradient-purple-cyan font-sans">
-                VORTEX
+                MASH ARENA
               </span>
               <span className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-bold tracking-widest text-cyan-400 border border-cyan-500/30 rounded bg-cyan-950/40">
                 PRO
