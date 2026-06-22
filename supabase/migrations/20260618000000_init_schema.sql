@@ -1,7 +1,58 @@
+-- Unified Esports Tournament Platform Schema Creation
+-- This script sets up all tables, row-level security (RLS) policies, triggers, and transactional RPC functions.
+
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
--- 1. Create Profiles Table (user settings & credentials)
+-- =========================================================================
+-- 1. DROP EXISTING CONFLICTING TABLES, FUNCTIONS, AND TRIGGERS (IDEMPOTENT)
+-- =========================================================================
+
+drop trigger if exists on_auth_user_created on auth.users;
+drop trigger if exists on_support_message_inserted on public.support_messages;
+
+drop function if exists public.handle_new_user() cascade;
+drop function if exists public.auto_update_ticket_status() cascade;
+drop function if exists public.register_for_tournament(uuid, text, text, text) cascade;
+drop function if exists public.declare_winners(uuid, jsonb) cascade;
+drop function if exists public.request_withdrawal(numeric, text) cascade;
+drop function if exists public.process_withdrawal(uuid, text, text) cascade;
+drop function if exists public.confirm_deposit(text, text, numeric) cascade;
+drop function if exists public.admin_confirm_deposit(uuid, text, text, numeric) cascade;
+
+drop table if exists public.referral_commissions cascade;
+drop table if exists public.referrals cascade;
+drop table if exists public.match_reports cascade;
+drop table if exists public.banners cascade;
+drop table if exists public.deposits cascade;
+drop table if exists public.audit_logs cascade;
+drop table if exists public.coupon_usage cascade;
+drop table if exists public.coupons cascade;
+drop table if exists public.team_members cascade;
+drop table if exists public.team_invites cascade;
+drop table if exists public.teams cascade;
+drop table if exists public.match_proofs cascade;
+drop table if exists public.ban_logs cascade;
+drop table if exists public.banned_users cascade;
+drop table if exists public.announcements cascade;
+drop table if exists public.notifications cascade;
+drop table if exists public.support_messages cascade;
+drop table if exists public.support_tickets cascade;
+drop table if exists public.winners cascade;
+drop table if exists public.withdrawals cascade;
+drop table if exists public.transactions cascade;
+drop table if exists public.wallets cascade;
+drop table if exists public.registrations cascade;
+drop table if exists public.tournament_rooms cascade;
+drop table if exists public.tournaments cascade;
+drop table if exists public.profiles cascade;
+drop table if exists public.admin_settings cascade;
+
+-- =========================================================================
+-- 2. CREATE BASE AND SYSTEM TABLES
+-- =========================================================================
+
+-- Profiles Table (Linked 1-to-1 with auth.users)
 create table public.profiles (
     id uuid references auth.users(id) on delete cascade primary key,
     name text not null,
@@ -13,10 +64,12 @@ create table public.profiles (
     freefire_ign text,
     profile_picture text,
     is_admin boolean default false,
+    role text default 'Player' check (role in ('Player', 'Super Admin', 'Tournament Admin', 'Support Admin', 'Moderator')),
+    verification_status text default 'Pending' check (verification_status in ('Verified', 'Pending', 'Rejected')),
     created_at timestamptz default now()
 );
 
--- 2. Create Tournaments Table
+-- Tournaments Table
 create table public.tournaments (
     id uuid default gen_random_uuid() primary key,
     title text not null,
@@ -33,7 +86,7 @@ create table public.tournaments (
     created_at timestamptz default now()
 );
 
--- 3. Create Tournament Rooms Table (Secret Room details, separate for security)
+-- Tournament Secret Rooms
 create table public.tournament_rooms (
     tournament_id uuid references public.tournaments(id) on delete cascade primary key,
     room_id text not null,
@@ -41,50 +94,54 @@ create table public.tournament_rooms (
     updated_at timestamptz default now()
 );
 
--- 4. Create Registrations Table
+-- Registrations Table
 create table public.registrations (
     id uuid default gen_random_uuid() primary key,
     tournament_id uuid references public.tournaments(id) on delete cascade,
     user_id uuid references auth.users(id) on delete cascade,
     game_id text not null,
     ign text not null,
+    check_in_status text default 'Pending' check (check_in_status in ('Checked In', 'Pending', 'DNQ')),
+    coupon_discount numeric default 0,
     created_at timestamptz default now(),
     constraint unique_registration unique(tournament_id, user_id)
 );
 
--- 5. Create Wallets Table
+-- Wallets Table
 create table public.wallets (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references auth.users(id) on delete cascade unique,
     deposit_balance numeric not null default 0 check (deposit_balance >= 0),
     winning_balance numeric not null default 0 check (winning_balance >= 0),
+    bonus_balance numeric not null default 0 check (bonus_balance >= 0),
     created_at timestamptz default now()
 );
 
--- 6. Create Transactions Table
+-- Transactions Ledger Table
 create table public.transactions (
     id uuid default gen_random_uuid() primary key,
     wallet_id uuid references public.wallets(id) on delete cascade,
-    type text not null check (type in ('Deposit', 'Entry Fee', 'Prize Credit', 'Withdrawal')),
-    amount numeric not null check (amount > 0),
+    type text not null check (type in ('Deposit', 'Entry Fee', 'Prize Credit', 'Withdrawal', 'Refund')),
+    amount numeric not null check (amount >= 0),
     status text not null default 'Completed' check (status in ('Pending', 'Completed', 'Failed', 'Cancelled')),
     reference_id uuid,
     description text,
     created_at timestamptz default now()
 );
 
--- 7. Create Withdrawals Table
+-- Withdrawals Table
 create table public.withdrawals (
     id uuid default gen_random_uuid() primary key,
     user_id uuid references auth.users(id) on delete cascade,
     upi_id text not null,
     amount numeric not null check (amount > 0),
     status text not null default 'Pending' check (status in ('Pending', 'Approved', 'Rejected')),
+    proof_image_url text,
     created_at timestamptz default now(),
     updated_at timestamptz default now()
 );
 
--- 8. Create Winners Table
+-- Winners Table
 create table public.winners (
     id uuid default gen_random_uuid() primary key,
     tournament_id uuid references public.tournaments(id) on delete cascade,
@@ -97,17 +154,206 @@ create table public.winners (
     constraint unique_tournament_winner unique(tournament_id, user_id)
 );
 
--- 9. Create Admin Settings Table
+-- Support Tickets Table
+create table public.support_tickets (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references auth.users(id) on delete cascade not null,
+    title text not null,
+    category text not null check (category in ('Tournament Issue', 'Withdrawal Issue', 'Registration Issue', 'Account Issue', 'Technical Issue', 'Other')),
+    status text not null default 'Open' check (status in ('Open', 'In Progress', 'Resolved', 'Closed')),
+    created_at timestamptz default now(),
+    updated_at timestamptz default now()
+);
+
+-- Support Messages Table
+create table public.support_messages (
+    id uuid default gen_random_uuid() primary key,
+    ticket_id uuid references public.support_tickets(id) on delete cascade not null,
+    sender_id uuid references auth.users(id) on delete cascade not null,
+    message text not null,
+    is_admin boolean default false,
+    created_at timestamptz default now()
+);
+
+-- Notifications Table
+create table public.notifications (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references auth.users(id) on delete cascade not null,
+    title text not null,
+    message text not null,
+    type text not null,
+    is_read boolean default false,
+    created_at timestamptz default now()
+);
+
+-- Announcements Table
+create table public.announcements (
+    id uuid default gen_random_uuid() primary key,
+    title text not null,
+    message text not null,
+    priority text not null default 'Low' check (priority in ('Low', 'Medium', 'High', 'Critical')),
+    type text not null check (type in ('Tournament Announcements', 'Maintenance Alerts', 'New Feature Updates', 'Emergency Notices')),
+    published_at timestamptz default now(),
+    expires_at timestamptz,
+    created_at timestamptz default now()
+);
+
+-- Banned Users (Anti-Cheat)
+create table public.banned_users (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references auth.users(id) on delete cascade unique,
+    banned_by uuid references auth.users(id) on delete set null,
+    reason text not null,
+    created_at timestamptz default now()
+);
+
+-- Anti-Cheat Ban Audit Logs
+create table public.ban_logs (
+    id uuid default gen_random_uuid() primary key,
+    target_id text not null,
+    type text not null check (type in ('User', 'UID', 'IGN')),
+    target_value text not null,
+    reason text not null,
+    action_by uuid references auth.users(id) on delete set null,
+    created_at timestamptz default now()
+);
+
+-- Match Screenshots Proof Table
+create table public.match_proofs (
+    id uuid default gen_random_uuid() primary key,
+    tournament_id uuid references public.tournaments(id) on delete cascade not null,
+    title text not null,
+    image_url text not null,
+    uploaded_by uuid references auth.users(id) on delete set null,
+    created_at timestamptz default now()
+);
+
+-- Clans / Teams Table
+create table public.teams (
+    id uuid default gen_random_uuid() primary key,
+    name text not null unique,
+    logo_url text,
+    captain_id uuid references auth.users(id) on delete cascade not null,
+    created_at timestamptz default now()
+);
+
+-- Clan Members Table
+create table public.team_members (
+    id uuid default gen_random_uuid() primary key,
+    team_id uuid references public.teams(id) on delete cascade not null,
+    user_id uuid references auth.users(id) on delete cascade not null unique,
+    role text not null default 'Member' check (role in ('Captain', 'Member')),
+    joined_at timestamptz default now()
+);
+
+-- Clan Invites Table
+create table public.team_invites (
+    id uuid default gen_random_uuid() primary key,
+    team_id uuid references public.teams(id) on delete cascade not null,
+    inviter_id uuid references auth.users(id) on delete cascade not null,
+    invitee_id uuid references auth.users(id) on delete cascade not null,
+    status text not null default 'Pending' check (status in ('Pending', 'Accepted', 'Declined')),
+    created_at timestamptz default now(),
+    constraint unique_team_invite unique(team_id, invitee_id)
+);
+
+-- Coupons Table
+create table public.coupons (
+    id uuid default gen_random_uuid() primary key,
+    code text not null unique,
+    type text not null check (type in ('Fixed', 'Percentage')),
+    value numeric not null check (value > 0),
+    expiry_date timestamptz not null,
+    usage_limit integer not null check (usage_limit > 0),
+    times_used integer not null default 0,
+    created_at timestamptz default now()
+);
+
+-- Coupon Usage Table
+create table public.coupon_usage (
+    id uuid default gen_random_uuid() primary key,
+    coupon_id uuid references public.coupons(id) on delete cascade not null,
+    user_id uuid references auth.users(id) on delete cascade not null,
+    tournament_id uuid references public.tournaments(id) on delete cascade not null,
+    used_at timestamptz default now()
+);
+
+-- Platform Audit Logs Table
+create table public.audit_logs (
+    id uuid default gen_random_uuid() primary key,
+    action_by uuid references auth.users(id) on delete set null,
+    action text not null,
+    target_type text not null,
+    target_id text,
+    details text,
+    created_at timestamptz default now()
+);
+
+-- Deposits Table (Razorpay gateway orders tracker)
+create table public.deposits (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references auth.users(id) on delete cascade not null,
+    razorpay_order_id text not null unique,
+    razorpay_payment_id text,
+    amount numeric not null check (amount > 0),
+    status text not null default 'Pending' check (status in ('Pending', 'Completed', 'Failed')),
+    created_at timestamptz default now()
+);
+
+-- Banners Table
+create table public.banners (
+    id uuid default gen_random_uuid() primary key,
+    title text not null,
+    image_url text not null,
+    link_url text,
+    is_active boolean default true,
+    created_at timestamptz default now()
+);
+
+-- Referrals Table
+create table public.referrals (
+    id uuid default gen_random_uuid() primary key,
+    referrer_id uuid references auth.users(id) on delete cascade not null,
+    referred_id uuid references auth.users(id) on delete cascade not null unique,
+    created_at timestamptz default now()
+);
+
+-- Referral Commissions Table
+create table public.referral_commissions (
+    id uuid default gen_random_uuid() primary key,
+    referral_id uuid references public.referrals(id) on delete cascade not null,
+    commission_amount numeric not null check (commission_amount >= 0),
+    status text not null default 'Pending' check (status in ('Pending', 'Paid')),
+    created_at timestamptz default now()
+);
+
+-- Anti-Cheat Match Reports / Kill stats
+create table public.match_reports (
+    id uuid default gen_random_uuid() primary key,
+    tournament_id uuid references public.tournaments(id) on delete cascade not null,
+    user_id uuid references auth.users(id) on delete cascade not null,
+    screenshot_url text not null,
+    kills integer default 0 check (kills >= 0),
+    is_verified boolean default false,
+    dispute_reason text,
+    created_at timestamptz default now(),
+    constraint unique_user_tournament_report unique(tournament_id, user_id)
+);
+
+-- Admin Configurations / Limits Settings Table
 create table public.admin_settings (
     key text primary key,
     value text not null,
     updated_at timestamptz default now()
 );
 
--- Seed Settings
+-- Seed defaults settings
 insert into public.admin_settings (key, value) values ('min_withdrawal_limit', '100');
 
--- 10. Enable Row Level Security (RLS) on all tables
+-- =========================================================================
+-- 3. ENABLE ROW LEVEL SECURITY (RLS) ON ALL TABLES
+-- =========================================================================
+
 alter table public.profiles enable row level security;
 alter table public.tournaments enable row level security;
 alter table public.tournament_rooms enable row level security;
@@ -116,106 +362,165 @@ alter table public.wallets enable row level security;
 alter table public.transactions enable row level security;
 alter table public.withdrawals enable row level security;
 alter table public.winners enable row level security;
+alter table public.support_tickets enable row level security;
+alter table public.support_messages enable row level security;
+alter table public.notifications enable row level security;
+alter table public.announcements enable row level security;
+alter table public.banned_users enable row level security;
+alter table public.ban_logs enable row level security;
+alter table public.match_proofs enable row level security;
+alter table public.teams enable row level security;
+alter table public.team_members enable row level security;
+alter table public.team_invites enable row level security;
+alter table public.coupons enable row level security;
+alter table public.coupon_usage enable row level security;
+alter table public.audit_logs enable row level security;
+alter table public.deposits enable row level security;
+alter table public.banners enable row level security;
+alter table public.referrals enable row level security;
+alter table public.referral_commissions enable row level security;
+alter table public.match_reports enable row level security;
 alter table public.admin_settings enable row level security;
 
--- 11. Define Row Level Security Policies
+-- =========================================================================
+-- 4. CONFIGURE ROW LEVEL SECURITY POLICIES
+-- =========================================================================
 
--- Profiles: Anyone can view profiles, users can modify their own
-create policy "Allow public read on profiles" on public.profiles
-    for select using (true);
+-- Profiles
+create policy "Public Profiles Read" on public.profiles for select using (true);
+create policy "Insert Own Profile" on public.profiles for insert with check (auth.uid() = id);
+create policy "Update Own Profile" on public.profiles for update using (auth.uid() = id or (select role from public.profiles where id = auth.uid()) = 'Super Admin');
 
-create policy "Allow insert on own profile" on public.profiles
-    for insert with check (auth.uid() = id);
+-- Tournaments
+create policy "Public Tournaments Read" on public.tournaments for select using (true);
+create policy "Admins Manage Tournaments" on public.tournaments for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Moderator'));
 
-create policy "Allow update on own profile" on public.profiles
-    for update using (auth.uid() = id or (select is_admin from public.profiles where id = auth.uid()) = true);
+-- Tournament Rooms
+create policy "Registered Players Read Room" on public.tournament_rooms for select using (
+    ((select room_published from public.tournaments where id = tournament_id) = true
+     and exists (select 1 from public.registrations where tournament_id = tournament_rooms.tournament_id and user_id = auth.uid()))
+    or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin')
+);
+create policy "Admins Manage Rooms" on public.tournament_rooms for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin'));
 
--- Tournaments: Anyone can view tournaments, only admins can modify
-create policy "Allow public read on tournaments" on public.tournaments
-    for select using (true);
+-- Registrations
+create policy "Public Registrations Read" on public.registrations for select using (true);
+create policy "Players Insert Own Registration" on public.registrations for insert with check (auth.uid() = user_id);
+create policy "Admins Manage Registrations" on public.registrations for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Moderator'));
 
-create policy "Allow admin write on tournaments" on public.tournaments
-    for all using ((select is_admin from public.profiles where id = auth.uid()) = true);
+-- Wallets
+create policy "Read Own Wallet" on public.wallets for select using (auth.uid() = user_id or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
+create policy "Admins Manage Wallets" on public.wallets for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
--- Tournament Rooms: Only registered players of a tournament can view published room details, only admins can write
-create policy "Allow registered players read room details" on public.tournament_rooms
-    for select using (
-        ((select room_published from public.tournaments where id = tournament_id) = true
-         and exists (select 1 from public.registrations where tournament_id = tournament_rooms.tournament_id and user_id = auth.uid()))
-        or (select is_admin from public.profiles where id = auth.uid()) = true
-    );
+-- Transactions
+create policy "Read Own Transactions" on public.transactions for select using (
+    wallet_id in (select id from public.wallets where user_id = auth.uid())
+    or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator')
+);
+create policy "Admins Manage Transactions" on public.transactions for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
-create policy "Allow admin write on tournament_rooms" on public.tournament_rooms
-    for all using ((select is_admin from public.profiles where id = auth.uid()) = true);
+-- Withdrawals
+create policy "Read Own Withdrawals" on public.withdrawals for select using (auth.uid() = user_id or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
+create policy "Insert Own Withdrawal" on public.withdrawals for insert with check (auth.uid() = user_id);
+create policy "Admins Manage Withdrawals" on public.withdrawals for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
--- Registrations: Anyone can view registrations, players can insert their own (usually via RPC), admins can modify
-create policy "Allow public read on registrations" on public.registrations
-    for select using (true);
+-- Winners
+create policy "Public Winners Read" on public.winners for select using (true);
+create policy "Admins Manage Winners" on public.winners for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Moderator'));
 
-create policy "Allow players insert own registration" on public.registrations
-    for insert with check (auth.uid() = user_id);
+-- Support Tickets
+create policy "Support Tickets Access" on public.support_tickets for all using (user_id = auth.uid() or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Support Admin', 'Moderator'));
+create policy "Support Messages Access" on public.support_messages for all using (
+    exists (select 1 from public.support_tickets where id = ticket_id and user_id = auth.uid())
+    or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Support Admin', 'Moderator')
+);
 
-create policy "Allow admin write on registrations" on public.registrations
-    for all using ((select is_admin from public.profiles where id = auth.uid()) = true);
+-- Notifications
+create policy "Notifications Read Update Own" on public.notifications for all using (user_id = auth.uid());
 
--- Wallets: Users can view their own wallet, only admins/system can update
-create policy "Allow user read own wallet" on public.wallets
-    for select using (auth.uid() = user_id or (select is_admin from public.profiles where id = auth.uid()) = true);
+-- Announcements
+create policy "Public Announcements Read" on public.announcements for select using (true);
+create policy "Admins Manage Announcements" on public.announcements for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
-create policy "Allow admin write on wallets" on public.wallets
-    for all using ((select is_admin from public.profiles where id = auth.uid()) = true);
+-- Blacklist
+create policy "Public Read Banned Users" on public.banned_users for select using (true);
+create policy "Admins Manage Banned Users" on public.banned_users for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
+create policy "Admins Manage Ban Logs" on public.ban_logs for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
--- Transactions: Users can view transactions linked to their wallet
-create policy "Allow user read own transactions" on public.transactions
-    for select using (
-        wallet_id in (select id from public.wallets where user_id = auth.uid())
-        or (select is_admin from public.profiles where id = auth.uid()) = true
-    );
+-- Match Proofs
+create policy "Public Read Match Proofs" on public.match_proofs for select using (true);
+create policy "Admins Manage Match Proofs" on public.match_proofs for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Moderator'));
 
-create policy "Allow admin write on transactions" on public.transactions
-    for all using ((select is_admin from public.profiles where id = auth.uid()) = true);
+-- Teams
+create policy "Public Read Teams" on public.teams for select using (true);
+create policy "Captains Manage Teams" on public.teams for all using (captain_id = auth.uid());
+create policy "Public Read Team Members" on public.team_members for select using (true);
+create policy "Members Exit Clans" on public.team_members for delete using (user_id = auth.uid());
+create policy "Captains Manage Members" on public.team_members for all using (
+    team_id in (select id from public.teams where captain_id = auth.uid())
+);
+create policy "Read Team Invites" on public.team_invites for select using (invitee_id = auth.uid() or inviter_id = auth.uid());
+create policy "Captains Send Invites" on public.team_invites for insert with check (inviter_id = auth.uid());
+create policy "Invitee Respond Invites" on public.team_invites for all using (invitee_id = auth.uid());
 
--- Withdrawals: Users can view and create their own, admins can update
-create policy "Allow user read own withdrawals" on public.withdrawals
-    for select using (auth.uid() = user_id or (select is_admin from public.profiles where id = auth.uid()) = true);
+-- Coupons & Usage
+create policy "Public Read Coupons" on public.coupons for select using (true);
+create policy "Admins Manage Coupons" on public.coupons for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
+create policy "Read Own Coupon Usage" on public.coupon_usage for select using (user_id = auth.uid() or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
+create policy "Players Insert Coupon Usage" on public.coupon_usage for insert with check (user_id = auth.uid());
 
-create policy "Allow user insert own withdrawal" on public.withdrawals
-    for insert with check (auth.uid() = user_id);
+-- Deposits
+create policy "Read Own Deposits" on public.deposits for select using (auth.uid() = user_id or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
+create policy "Admins Manage Deposits" on public.deposits for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
-create policy "Allow admin write on withdrawals" on public.withdrawals
-    for all using ((select is_admin from public.profiles where id = auth.uid()) = true);
+-- Banners
+create policy "Public Read Banners" on public.banners for select using (true);
+create policy "Admins Manage Banners" on public.banners for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
--- Winners: Anyone can view winners, only admins can write
-create policy "Allow public read on winners" on public.winners
-    for select using (true);
+-- Referrals & Commissions
+create policy "Read Own Referrals" on public.referrals for select using (auth.uid() = referrer_id or auth.uid() = referred_id or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
+create policy "Public Insert Referrals" on public.referrals for insert with check (true);
+create policy "Read Own Commissions" on public.referral_commissions for select using (
+    referral_id in (select id from public.referrals where referrer_id = auth.uid())
+    or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator')
+);
+create policy "Admins Manage Referrals" on public.referrals for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
+create policy "Admins Manage Commissions" on public.referral_commissions for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
-create policy "Allow admin write on winners" on public.winners
-    for all using ((select is_admin from public.profiles where id = auth.uid()) = true);
+-- Match Reports
+create policy "Read Own Match Reports" on public.match_reports for select using (auth.uid() = user_id or (select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Moderator'));
+create policy "Insert Own Match Report" on public.match_reports for insert with check (auth.uid() = user_id);
+create policy "Admins Manage Match Reports" on public.match_reports for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Tournament Admin', 'Moderator'));
 
--- Admin Settings: Anyone can read settings, only admins can write
-create policy "Allow public read on settings" on public.admin_settings
-    for select using (true);
+-- Settings
+create policy "Public Settings Read" on public.admin_settings for select using (true);
+create policy "Admins Manage Settings" on public.admin_settings for all using ((select role from public.profiles where id = auth.uid()) in ('Super Admin', 'Moderator'));
 
-create policy "Allow admin write on settings" on public.admin_settings
-    for all using ((select is_admin from public.profiles where id = auth.uid()) = true);
+-- =========================================================================
+-- 5. DEFINE DATABASE TRIGGERS
+-- =========================================================================
 
--- 12. Create Auth Triggers (Auto-Profile & Wallet creation)
+-- Trigger to create profile and wallet automatically on user registration
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, name, email, is_admin)
+  insert into public.profiles (id, name, email, is_admin, role)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.email,
     case 
       when new.email = 'sumit903970@gmail.com' then true
-      else coalesce((new.raw_user_meta_data->>'is_admin')::boolean, false)
+      else false
+    end,
+    case 
+      when new.email = 'sumit903970@gmail.com' then 'Super Admin'
+      else 'Player'
     end
   );
 
-  insert into public.wallets (user_id, deposit_balance, winning_balance)
-  values (new.id, 0, 0);
+  insert into public.wallets (user_id, deposit_balance, winning_balance, bonus_balance)
+  values (new.id, 0, 0, 0);
 
   return new;
 end;
@@ -225,27 +530,54 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- 13. Create transactional RPC database functions
+-- Trigger to auto-update ticket status to 'In Progress' when an admin responds
+create or replace function public.auto_update_ticket_status()
+returns trigger as $$
+begin
+  if new.is_admin = true then
+    update public.support_tickets 
+    set status = 'In Progress', updated_at = now() 
+    where id = new.ticket_id;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
 
--- Function: Register for tournament securely
+create trigger on_support_message_inserted
+  after insert on public.support_messages
+  for each row execute procedure public.auto_update_ticket_status();
+
+-- =========================================================================
+-- 6. CONFIGURE SECURE TRANSACTIONAL PROCEDURES (RPCs)
+-- =========================================================================
+
+-- Function: Register for tournament atomically
 create or replace function public.register_for_tournament(
   p_tournament_id uuid,
   p_game_id text,
-  p_ign text
+  p_ign text,
+  p_coupon_code text default null
 )
 returns json as $$
 declare
   v_user_id uuid;
   v_entry_fee numeric;
+  v_discount numeric := 0;
+  v_final_fee numeric;
   v_total_slots integer;
   v_filled_slots integer;
   v_status text;
   v_wallet_id uuid;
   v_deposit numeric;
   v_winning numeric;
+  v_bonus numeric;
   v_total_bal numeric;
-  v_deduct_deposit numeric;
-  v_deduct_winning numeric;
+  v_deduct_bonus numeric := 0;
+  v_deduct_deposit numeric := 0;
+  v_deduct_winning numeric := 0;
+  v_coupon_id uuid;
+  v_coupon_type text;
+  v_coupon_value numeric;
   v_reg_id uuid;
 begin
   v_user_id := auth.uid();
@@ -253,19 +585,22 @@ begin
     raise exception 'Unauthorized';
   end if;
 
-  -- Lock tournament row for update to prevent slot overflow race conditions
-  select entry_fee, total_slots, filled_slots, status
-  into v_entry_fee, v_total_slots, v_filled_slots, v_status
-  from public.tournaments
-  where id = p_tournament_id
-  for update;
+  -- 1. Lock tournament and retrieve slots, entry fee, status
+  select entry_fee, total_slots, filled_slots, status 
+  into v_entry_fee, v_total_slots, v_filled_slots, v_status 
+  from public.tournaments 
+  where id = p_tournament_id for update;
+
+  if not found then
+    raise exception 'Tournament not found';
+  end if;
 
   if v_status != 'Upcoming' then
-    raise exception 'Registrations are closed for this tournament';
+    raise exception 'Registration is only allowed for upcoming tournaments';
   end if;
 
   if v_filled_slots >= v_total_slots then
-    raise exception 'Tournament slots are full';
+    raise exception 'Tournament lobby is full';
   end if;
 
   -- Check if already registered
@@ -273,60 +608,225 @@ begin
     raise exception 'You are already registered for this tournament';
   end if;
 
-  -- Lock user wallet
-  select id, deposit_balance, winning_balance
-  into v_wallet_id, v_deposit, v_winning
-  from public.wallets
-  where user_id = v_user_id
-  for update;
+  -- 2. Handle Coupon Code validation
+  v_final_fee := v_entry_fee;
+  if p_coupon_code is not null and p_coupon_code != '' then
+    select id, type, value into v_coupon_id, v_coupon_type, v_coupon_value
+    from public.coupons
+    where code = upper(p_coupon_code) and expiry_date > now() and times_used < usage_limit;
 
-  v_total_bal := v_deposit + v_winning;
-  if v_total_bal < v_entry_fee then
-    raise exception 'Insufficient wallet balance. Please add funds';
+    if v_coupon_id is null then
+      raise exception 'Invalid or expired coupon code';
+    end if;
+
+    -- Prevent duplicate coupon usage by the same user
+    if exists (select 1 from public.coupon_usage where coupon_id = v_coupon_id and user_id = v_user_id) then
+      raise exception 'Coupon code already used';
+    end if;
+
+    if v_coupon_type = 'Fixed' then
+      v_discount := v_coupon_value;
+    else
+      v_discount := round((v_entry_fee * (v_coupon_value / 100.0)), 2);
+    end if;
+
+    v_final_fee := greatest(0, v_entry_fee - v_discount);
   end if;
 
-  -- Calculate deduction (prefer deposit balance first)
-  if v_deposit >= v_entry_fee then
-    v_deduct_deposit := v_entry_fee;
-    v_deduct_winning := 0;
-  else
-    v_deduct_deposit := v_deposit;
-    v_deduct_winning := v_entry_fee - v_deposit;
+  -- 3. Lock Wallet and Check Balances
+  select id, deposit_balance, winning_balance, bonus_balance 
+  into v_wallet_id, v_deposit, v_winning, v_bonus 
+  from public.wallets 
+  where user_id = v_user_id for update;
+
+  if not found then
+    raise exception 'Player wallet not found';
   end if;
 
-  -- Update wallet
-  update public.wallets
-  set deposit_balance = deposit_balance - v_deduct_deposit,
-      winning_balance = winning_balance - v_deduct_winning
-  where id = v_wallet_id;
+  v_total_bal := v_deposit + v_winning + v_bonus;
+  if v_total_bal < v_final_fee then
+    raise exception 'Insufficient wallet balance. Total required: ₹%', v_final_fee;
+  end if;
 
-  -- Insert registration
-  insert into public.registrations (tournament_id, user_id, game_id, ign)
-  values (p_tournament_id, v_user_id, p_game_id, p_ign)
+  -- 4. Deduct balances (Bonus -> Deposit -> Winnings order)
+  if v_final_fee > 0 then
+    -- Deduct bonus balance
+    v_deduct_bonus := least(v_bonus, v_final_fee);
+    v_final_fee := v_final_fee - v_deduct_bonus;
+
+    -- Deduct deposit balance
+    if v_final_fee > 0 then
+      v_deduct_deposit := least(v_deposit, v_final_fee);
+      v_final_fee := v_final_fee - v_deduct_deposit;
+    end if;
+
+    -- Deduct winning balance
+    if v_final_fee > 0 then
+      v_deduct_winning := least(v_winning, v_final_fee);
+      v_final_fee := v_final_fee - v_deduct_winning;
+    end if;
+
+    -- Update wallet balance values
+    update public.wallets 
+    set bonus_balance = bonus_balance - v_deduct_bonus,
+        deposit_balance = deposit_balance - v_deduct_deposit,
+        winning_balance = winning_balance - v_deduct_winning
+    where id = v_wallet_id;
+  end if;
+
+  -- 5. Record Coupon Usage (if valid)
+  if v_coupon_id is not null then
+    insert into public.coupon_usage (coupon_id, user_id, tournament_id)
+    values (v_coupon_id, v_user_id, p_tournament_id);
+
+    update public.coupons set times_used = times_used + 1 where id = v_coupon_id;
+  end if;
+
+  -- 6. Insert Registration
+  insert into public.registrations (tournament_id, user_id, game_id, ign, coupon_discount)
+  values (p_tournament_id, v_user_id, p_game_id, p_ign, v_discount)
   returning id into v_reg_id;
 
-  -- Increment filled slots
-  update public.tournaments
-  set filled_slots = filled_slots + 1
+  -- Increment filled slots count
+  update public.tournaments 
+  set filled_slots = filled_slots + 1 
   where id = p_tournament_id;
 
-  -- Log transaction
+  -- 7. Record Transaction Ledger Log
   insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
   values (
     v_wallet_id,
     'Entry Fee',
-    v_entry_fee,
+    (v_deduct_bonus + v_deduct_deposit + v_deduct_winning),
     'Completed',
     v_reg_id,
-    'Registration fee for tournament ' || p_tournament_id
+    'Tournament Entry Registration Fee (Applied discount: ₹' || v_discount || ')'
   );
 
-  return json_build_object('success', true, 'registration_id', v_reg_id);
+  -- 8. Send registration success notification
+  insert into public.notifications (user_id, title, message, type)
+  values (
+    v_user_id,
+    'Registration Success',
+    'Successfully joined match slot for tournament ID: ' || p_tournament_id,
+    'Tournament Registration'
+  );
+
+  return json_build_object(
+    'success', true, 
+    'registration_id', v_reg_id,
+    'discount_applied', v_discount,
+    'final_fee_deducted', (v_deduct_bonus + v_deduct_deposit + v_deduct_winning)
+  );
 end;
 $$ language plpgsql security definer;
 
--- Function: Submit withdrawal request securely
-create or replace function public.submit_withdrawal(
+-- Function: Declare tournament winners and automatically split payouts (50% / 30% / 20%)
+create or replace function public.declare_winners(
+  p_tournament_id uuid,
+  p_winners jsonb -- Array format: [{"user_id": "uuid", "rank": 1}, {"user_id": "uuid", "rank": 2}, ...]
+)
+returns json as $$
+declare
+  v_operator_role text;
+  v_prize_pool numeric;
+  v_status text;
+  v_winner record;
+  v_payout numeric;
+  v_wallet_id uuid;
+  v_winner_id uuid;
+  v_winner_rank integer;
+  v_winner_row uuid;
+begin
+  -- Validate operator role permissions
+  select role into v_operator_role from public.profiles where id = auth.uid();
+  if v_operator_role not in ('Super Admin', 'Tournament Admin', 'Moderator') then
+    raise exception 'Unauthorized: Only admins or moderators can declare winners';
+  end if;
+
+  -- Lock tournament row
+  select prize_pool, status into v_prize_pool, v_status 
+  from public.tournaments 
+  where id = p_tournament_id for update;
+
+  if not found then
+    raise exception 'Tournament not found';
+  end if;
+
+  if v_status = 'Completed' then
+    raise exception 'Tournament results have already been finalized and published';
+  end if;
+
+  -- Loop through the JSON array elements of winners
+  for v_winner in select * from jsonb_to_recordset(p_winners) as x(user_id uuid, rank integer) loop
+    v_winner_id := v_winner.user_id;
+    v_winner_rank := v_winner.rank;
+
+    -- Validate that user is actually registered for this tournament
+    if not exists (select 1 from public.registrations where tournament_id = p_tournament_id and user_id = v_winner_id) then
+      raise exception 'Winner user ID % is not registered for this tournament', v_winner_id;
+    end if;
+
+    -- Calculate payout ratio (Rank 1 = 50%, Rank 2 = 30%, Rank 3 = 20%)
+    if v_winner_rank = 1 then
+      v_payout := round(v_prize_pool * 0.50, 2);
+    elsif v_winner_rank = 2 then
+      v_payout := round(v_prize_pool * 0.30, 2);
+    elsif v_winner_rank = 3 then
+      v_payout := round(v_prize_pool * 0.20, 2);
+    else
+      raise exception 'Invalid winning rank: %', v_winner_rank;
+    end if;
+
+    -- Lock and credit the winner's wallet
+    select id into v_wallet_id from public.wallets where user_id = v_winner_id for update;
+    update public.wallets set winning_balance = winning_balance + v_payout where id = v_wallet_id;
+
+    -- Add to winners list
+    insert into public.winners (tournament_id, user_id, rank, prize_won)
+    values (p_tournament_id, v_winner_id, v_winner_rank, v_payout)
+    returning id into v_winner_row;
+
+    -- Create transaction ledger log
+    insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
+    values (
+      v_wallet_id,
+      'Prize Credit',
+      v_payout,
+      'Completed',
+      v_winner_row,
+      'Esports Tournament prize credit for Rank ' || v_winner_rank || ' placement'
+    );
+
+    -- Send notifications to winners
+    insert into public.notifications (user_id, title, message, type)
+    values (
+      v_winner_id,
+      'Prize Money Credited!',
+      'Congratulations! You placed Rank ' || v_winner_rank || ' and won ₹' || v_payout || ' winnings credit.',
+      'Prize Earned'
+    );
+  end loop;
+
+  -- Mark tournament as completed
+  update public.tournaments set status = 'Completed' where id = p_tournament_id;
+
+  -- Create audit log entry
+  insert into public.audit_logs (action_by, action, target_type, target_id, details)
+  values (
+    auth.uid(),
+    'Declare Winners',
+    'Tournament',
+    p_tournament_id::text,
+    'Finalized standings and distributed ₹' || v_prize_pool || ' total prize pool'
+  );
+
+  return json_build_object('success', true);
+end;
+$$ language plpgsql security definer;
+
+-- Function: Request a withdrawal securely (instantly deducts winnings to prevent double-spending)
+create or replace function public.request_withdrawal(
   p_amount numeric,
   p_upi_id text
 )
@@ -335,7 +835,7 @@ declare
   v_user_id uuid;
   v_min_limit numeric;
   v_wallet_id uuid;
-  v_winning_bal numeric;
+  v_winnings numeric;
   v_withdrawal_id uuid;
 begin
   v_user_id := auth.uid();
@@ -343,41 +843,38 @@ begin
     raise exception 'Unauthorized';
   end if;
 
-  -- Get min limit setting
-  select coalesce((value)::numeric, 100.0) into v_min_limit
-  from public.admin_settings
-  where key = 'min_withdrawal_limit';
-  
+  if p_amount <= 0 then
+    raise exception 'Withdrawal amount must be greater than zero';
+  end if;
+
+  -- Get minimum withdrawal limit settings
+  select value::numeric into v_min_limit from public.admin_settings where key = 'min_withdrawal_limit';
   if v_min_limit is null then
-    v_min_limit := 100.0;
+    v_min_limit := 100;
   end if;
 
   if p_amount < v_min_limit then
     raise exception 'Minimum withdrawal limit is ₹%', v_min_limit;
   end if;
 
-  -- Lock user wallet
-  select id, winning_balance
-  into v_wallet_id, v_winning_bal
-  from public.wallets
-  where user_id = v_user_id
-  for update;
+  -- Lock wallet
+  select id, winning_balance into v_wallet_id, v_winnings 
+  from public.wallets 
+  where user_id = v_user_id for update;
 
-  if v_winning_bal < p_amount then
-    raise exception 'Insufficient winning balance for withdrawal';
+  if v_winnings < p_amount then
+    raise exception 'Insufficient winnings balance. Available: ₹%', v_winnings;
   end if;
 
-  -- Deduct from wallet winning balance (hold the money in withdrawal)
-  update public.wallets
-  set winning_balance = winning_balance - p_amount
-  where id = v_wallet_id;
+  -- Instantly deduct winnings to reserve them securely
+  update public.wallets set winning_balance = winning_balance - p_amount where id = v_wallet_id;
 
-  -- Insert withdrawal request
+  -- Create withdrawal record
   insert into public.withdrawals (user_id, upi_id, amount, status)
   values (v_user_id, p_upi_id, p_amount, 'Pending')
   returning id into v_withdrawal_id;
 
-  -- Log transaction (starts in Pending status)
+  -- Create pending ledger log
   insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
   values (
     v_wallet_id,
@@ -388,219 +885,236 @@ begin
     'Withdrawal request to UPI: ' || p_upi_id
   );
 
-  return json_build_object('success', true, 'withdrawal_id', v_withdrawal_id);
+  return json_build_object(
+    'success', true,
+    'withdrawal_id', v_withdrawal_id,
+    'withdrawn_amount', p_amount,
+    'remaining_winning_balance', (v_winnings - p_amount)
+  );
 end;
 $$ language plpgsql security definer;
 
--- Function: Process withdrawal request securely (Admin only)
+-- Function: Admin process withdrawals requests (Approve or Reject with instant refunds)
 create or replace function public.process_withdrawal(
   p_withdrawal_id uuid,
-  p_approve boolean
+  p_action text, -- 'Approve' or 'Reject'
+  p_proof_image_url text default null
 )
 returns json as $$
 declare
-  v_caller_id uuid;
-  v_is_admin boolean;
+  v_operator_role text;
   v_user_id uuid;
   v_amount numeric;
   v_status text;
   v_wallet_id uuid;
 begin
-  v_caller_id := auth.uid();
-  if v_caller_id is null then
-    raise exception 'Unauthorized';
+  -- Validate operator permissions
+  select role into v_operator_role from public.profiles where id = auth.uid();
+  if v_operator_role not in ('Super Admin', 'Moderator') then
+    raise exception 'Unauthorized: Only admins or moderators can process withdrawals';
   end if;
 
-  select is_admin into v_is_admin from public.profiles where id = v_caller_id;
-  if not coalesce(v_is_admin, false) then
-    raise exception 'Admin access required';
+  if p_action not in ('Approve', 'Reject') then
+    raise exception 'Invalid action: Choose Approve or Reject';
   end if;
 
-  -- Lock withdrawal record
-  select user_id, amount, status
-  into v_user_id, v_amount, v_status
-  from public.withdrawals
-  where id = p_withdrawal_id
-  for update;
+  -- Lock withdrawal request record
+  select user_id, amount, status into v_user_id, v_amount, v_status 
+  from public.withdrawals 
+  where id = p_withdrawal_id for update;
+
+  if not found then
+    raise exception 'Withdrawal request not found';
+  end if;
 
   if v_status != 'Pending' then
     raise exception 'Withdrawal request has already been processed';
   end if;
 
-  if p_approve then
-    -- Approve withdrawal
-    update public.withdrawals
-    set status = 'Approved', updated_at = now()
+  -- Handle Approval Action
+  if p_action = 'Approve' then
+    update public.withdrawals 
+    set status = 'Approved', proof_image_url = p_proof_image_url, updated_at = now() 
     where id = p_withdrawal_id;
 
-    update public.transactions
-    set status = 'Completed'
-    where reference_id = p_withdrawal_id and type = 'Withdrawal';
+    -- Complete transaction record
+    update public.transactions 
+    set status = 'Completed', description = description || ' (Approved by administrator)'
+    where reference_id = p_withdrawal_id;
+
+    -- Notify user
+    insert into public.notifications (user_id, title, message, type)
+    values (
+      v_user_id,
+      'Withdrawal Approved',
+      'Your withdrawal request of ₹' || v_amount || ' has been approved. Funds sent to your UPI ID.',
+      'Withdrawal Update'
+    );
+
+  -- Handle Rejection Action (issues wallet refund)
   else
-    -- Reject withdrawal, refund winnings
-    update public.withdrawals
-    set status = 'Rejected', updated_at = now()
+    update public.withdrawals 
+    set status = 'Rejected', updated_at = now() 
     where id = p_withdrawal_id;
 
-    update public.transactions
-    set status = 'Failed'
-    where reference_id = p_withdrawal_id and type = 'Withdrawal';
-
-    -- Lock and credit wallet back
+    -- Revert / Lock user wallet and credit back the reserved balance
     select id into v_wallet_id from public.wallets where user_id = v_user_id for update;
-    
-    update public.wallets
-    set winning_balance = winning_balance + v_amount
-    where id = v_wallet_id;
-    
+    update public.wallets set winning_balance = winning_balance + v_amount where id = v_wallet_id;
+
+    -- Fail the initial transaction ledger log
+    update public.transactions 
+    set status = 'Failed', description = description || ' (Rejected by administrator)'
+    where reference_id = p_withdrawal_id;
+
+    -- Add a refund transaction
     insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
     values (
       v_wallet_id,
-      'Prize Credit',
+      'Refund',
       v_amount,
       'Completed',
       p_withdrawal_id,
-      'Refund for rejected withdrawal request'
+      'Refunded withdrawal request (Rejected by administrator)'
+    );
+
+    -- Notify user
+    insert into public.notifications (user_id, title, message, type)
+    values (
+      v_user_id,
+      'Withdrawal Rejected',
+      'Your withdrawal request of ₹' || v_amount || ' was rejected. Winnings balance has been refunded.',
+      'Withdrawal Update'
     );
   end if;
+
+  -- Log action in audit log
+  insert into public.audit_logs (action_by, action, target_type, target_id, details)
+  values (
+    auth.uid(),
+    p_action || ' Withdrawal',
+    'Withdrawal',
+    p_withdrawal_id::text,
+    'Processed withdrawal request of ₹' || v_amount
+  );
 
   return json_build_object('success', true);
 end;
 $$ language plpgsql security definer;
 
--- Function: Auto-calculate and distribute prizes (Admin only)
-create or replace function public.publish_tournament_results(
-  p_tournament_id uuid,
-  p_rank1_user_id uuid,
-  p_rank2_user_id uuid,
-  p_rank3_user_id uuid
+-- Function: Client-scoped Razorpay deposits confirmation
+create or replace function public.confirm_deposit(
+  p_order_id text,
+  p_payment_id text,
+  p_amount numeric
 )
-returns json as $$
-declare
-  v_caller_id uuid;
-  v_is_admin boolean;
-  v_entry_fee numeric;
-  v_filled_slots integer;
-  v_status text;
-  v_collection numeric;
-  v_prize_pool numeric;
-  v_p1 numeric;
-  v_p2 numeric;
-  v_p3 numeric;
-  v_wallet_id uuid;
-  v_winner_id uuid;
-begin
-  v_caller_id := auth.uid();
-  if v_caller_id is null then
-    raise exception 'Unauthorized';
-  end if;
-
-  select is_admin into v_is_admin from public.profiles where id = v_caller_id;
-  if not coalesce(v_is_admin, false) then
-    raise exception 'Admin access required';
-  end if;
-
-  -- Lock tournament row
-  select entry_fee, filled_slots, status
-  into v_entry_fee, v_filled_slots, v_status
-  from public.tournaments
-  where id = p_tournament_id
-  for update;
-
-  if v_status = 'Completed' then
-    raise exception 'Results have already been published for this tournament';
-  end if;
-
-  -- Verify users are registered
-  if p_rank1_user_id is not null and not exists (select 1 from public.registrations where tournament_id = p_tournament_id and user_id = p_rank1_user_id) then
-    raise exception 'Rank 1 player is not registered for this tournament';
-  end if;
-  if p_rank2_user_id is not null and not exists (select 1 from public.registrations where tournament_id = p_tournament_id and user_id = p_rank2_user_id) then
-    raise exception 'Rank 2 player is not registered for this tournament';
-  end if;
-  if p_rank3_user_id is not null and not exists (select 1 from public.registrations where tournament_id = p_tournament_id and user_id = p_rank3_user_id) then
-    raise exception 'Rank 3 player is not registered for this tournament';
-  end if;
-
-  v_collection := v_entry_fee * v_filled_slots;
-  v_prize_pool := 0.50 * v_collection; -- 50% to Prize Pool, 50% to platform revenue
-  
-  v_p1 := 0.50 * v_prize_pool; -- Rank 1 = 50%
-  v_p2 := 0.30 * v_prize_pool; -- Rank 2 = 30%
-  v_p3 := 0.20 * v_prize_pool; -- Rank 3 = 20%
-
-  -- Insert Rank 1
-  if p_rank1_user_id is not null and v_p1 > 0 then
-    insert into public.winners (tournament_id, user_id, rank, prize_won)
-    values (p_tournament_id, p_rank1_user_id, 1, v_p1)
-    returning id into v_winner_id;
-
-    select id into v_wallet_id from public.wallets where user_id = p_rank1_user_id for update;
-    update public.wallets set winning_balance = winning_balance + v_p1 where id = v_wallet_id;
-    insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
-    values (v_wallet_id, 'Prize Credit', v_p1, 'Completed', v_winner_id, 'Rank 1 prize for tournament ' || p_tournament_id);
-  end if;
-
-  -- Insert Rank 2
-  if p_rank2_user_id is not null and v_p2 > 0 then
-    insert into public.winners (tournament_id, user_id, rank, prize_won)
-    values (p_tournament_id, p_rank2_user_id, 2, v_p2)
-    returning id into v_winner_id;
-
-    select id into v_wallet_id from public.wallets where user_id = p_rank2_user_id for update;
-    update public.wallets set winning_balance = winning_balance + v_p2 where id = v_wallet_id;
-    insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
-    values (v_wallet_id, 'Prize Credit', v_p2, 'Completed', v_winner_id, 'Rank 2 prize for tournament ' || p_tournament_id);
-  end if;
-
-  -- Insert Rank 3
-  if p_rank3_user_id is not null and v_p3 > 0 then
-    insert into public.winners (tournament_id, user_id, rank, prize_won)
-    values (p_tournament_id, p_rank3_user_id, 3, v_p3)
-    returning id into v_winner_id;
-
-    select id into v_wallet_id from public.wallets where user_id = p_rank3_user_id for update;
-    update public.wallets set winning_balance = winning_balance + v_p3 where id = v_wallet_id;
-    insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
-    values (v_wallet_id, 'Prize Credit', v_p3, 'Completed', v_winner_id, 'Rank 3 prize for tournament ' || p_tournament_id);
-  end if;
-
-  -- Set tournament status to Completed
-  update public.tournaments
-  set status = 'Completed'
-  where id = p_tournament_id;
-
-  return json_build_object(
-    'success', true,
-    'collection', v_collection,
-    'prize_pool', v_prize_pool,
-    'prizes', json_build_object('rank1', v_p1, 'rank2', v_p2, 'rank3', v_p3)
-  );
-end;
-$$ language plpgsql security definer;
-
--- Function: Mock Deposit for testing
-create or replace function public.deposit_mock_funds(p_amount numeric)
 returns json as $$
 declare
   v_user_id uuid;
   v_wallet_id uuid;
+  v_deposit_id uuid;
 begin
   v_user_id := auth.uid();
   if v_user_id is null then
     raise exception 'Unauthorized';
   end if;
 
-  if p_amount <= 0 then
-    raise exception 'Deposit amount must be positive';
+  -- Prevent duplicate processing
+  if exists (select 1 from public.deposits where razorpay_order_id = p_order_id and status = 'Completed') then
+    raise exception 'Deposit order has already been processed';
   end if;
 
+  -- Save completed deposit
+  insert into public.deposits (user_id, razorpay_order_id, razorpay_payment_id, amount, status)
+  values (v_user_id, p_order_id, p_payment_id, p_amount, 'Completed')
+  on conflict (razorpay_order_id) do update 
+  set razorpay_payment_id = p_payment_id, status = 'Completed', created_at = now()
+  returning id into v_deposit_id;
+
+  -- Lock and credit wallet
   select id into v_wallet_id from public.wallets where user_id = v_user_id for update;
   update public.wallets set deposit_balance = deposit_balance + p_amount where id = v_wallet_id;
 
-  insert into public.transactions (wallet_id, type, amount, status, description)
-  values (v_wallet_id, 'Deposit', p_amount, 'Completed', 'Mock fund deposit via wallet system');
+  -- Transaction Ledger Log
+  insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
+  values (
+    v_wallet_id,
+    'Deposit',
+    p_amount,
+    'Completed',
+    v_deposit_id,
+    'Deposit via Razorpay payment gateway (Order ID: ' || p_order_id || ')'
+  );
+
+  -- Send notification
+  insert into public.notifications (user_id, title, message, type)
+  values (
+    v_user_id,
+    'Deposit Credited',
+    '₹' || p_amount || ' deposit credited successfully to your wallet.',
+    'Deposit Received'
+  );
 
   return json_build_object('success', true, 'new_deposit_balance', (select deposit_balance from public.wallets where id = v_wallet_id));
 end;
 $$ language plpgsql security definer;
+
+-- Function: Admin-scoped webhook Razorpay deposits confirmation
+create or replace function public.admin_confirm_deposit(
+  p_user_id uuid,
+  p_order_id text,
+  p_payment_id text,
+  p_amount numeric
+)
+returns json as $$
+declare
+  v_wallet_id uuid;
+  v_deposit_id uuid;
+begin
+  -- Prevent duplicate processing
+  if exists (select 1 from public.deposits where razorpay_order_id = p_order_id and status = 'Completed') then
+    return json_build_object('success', true, 'message', 'Already processed');
+  end if;
+
+  -- Save completed deposit
+  insert into public.deposits (user_id, razorpay_order_id, razorpay_payment_id, amount, status)
+  values (p_user_id, p_order_id, p_payment_id, p_amount, 'Completed')
+  on conflict (razorpay_order_id) do update 
+  set razorpay_payment_id = p_payment_id, status = 'Completed', created_at = now()
+  returning id into v_deposit_id;
+
+  -- Lock and credit wallet (ensure wallet exists first)
+  select id into v_wallet_id from public.wallets where user_id = p_user_id for update;
+  if v_wallet_id is null then
+    insert into public.wallets (user_id, deposit_balance, winning_balance)
+    values (p_user_id, 0, 0)
+    returning id into v_wallet_id;
+  end if;
+
+  update public.wallets set deposit_balance = deposit_balance + p_amount where id = v_wallet_id;
+
+  -- Transaction Ledger Log
+  insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
+  values (
+    v_wallet_id,
+    'Deposit',
+    p_amount,
+    'Completed',
+    v_deposit_id,
+    'Deposit via Razorpay gateway webhook (Order ID: ' || p_order_id || ')'
+  );
+
+  -- Send notification
+  insert into public.notifications (user_id, title, message, type)
+  values (
+    p_user_id,
+    'Deposit Credited',
+    '₹' || p_amount || ' deposit credited successfully to your wallet.',
+    'Deposit Received'
+  );
+
+  return json_build_object('success', true);
+end;
+$$ language plpgsql security definer;
+
+-- Revoke function from public execution for webhook security
+revoke execute on function public.admin_confirm_deposit(uuid, text, text, numeric) from public;
