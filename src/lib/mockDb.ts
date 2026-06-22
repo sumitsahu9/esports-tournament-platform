@@ -31,7 +31,7 @@ const setStore = (key: string, data: any) => {
 const initialTournaments = [
   {
     id: 'bgmi-squad-1',
-    title: 'Vortex BGMI Squad Showdown',
+    title: 'Mash Arena BGMI Squad Showdown',
     game: 'BGMI',
     mode: 'Squad',
     entry_fee: 50,
@@ -77,7 +77,7 @@ const initialTournaments = [
 const initialAnnouncements = [
   {
     id: 'ann-1',
-    title: 'Vortex Pro Esports Arena Launching!',
+    title: 'Mash Arena Pro Esports Arena Launching!',
     message: 'Welcome to the ultimate BGMI & Free Fire gaming tournament arena. Play matches, declare squad supremacy, and claim cash rewards.',
     priority: 'Low',
     type: 'New Feature Updates',
@@ -87,7 +87,7 @@ const initialAnnouncements = [
   {
     id: 'ann-2',
     title: 'Platform Maintenance Notification',
-    message: 'Vortex services will undergo scheduled system upgrades on Saturday from 2:00 AM to 4:00 AM IST. Tournament registrations will remain active.',
+    message: 'Mash Arena services will undergo scheduled system upgrades on Saturday from 2:00 AM to 4:00 AM IST. Tournament registrations will remain active.',
     priority: 'High',
     type: 'Maintenance Alerts',
     published_at: new Date().toISOString(),
@@ -98,8 +98,8 @@ const initialAnnouncements = [
 // Seed initial coupons
 const initialCoupons = [
   {
-    id: 'cp-vortex50',
-    code: 'VORTEX50',
+    id: 'cp-mash50',
+    code: 'MASH50',
     type: 'Percentage',
     value: 50,
     expiry_date: new Date(Date.now() + 3600 * 240000).toISOString(),
@@ -155,17 +155,17 @@ const initialRegistrations = [
 
 // Seed initial profiles
 const initialProfiles = {
-  'user-raptor': { id: 'user-raptor', name: 'Raptor_IGN', email: 'raptor@vortex.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '5129381', bgmi_ign: 'Raptor_IGN' },
-  'user-xenon': { id: 'user-xenon', name: 'XenonFF', email: 'xenon@vortex.com', role: 'Player', verification_status: 'Verified', freefire_uid: '7194827', freefire_ign: 'XenonFF' },
-  'user-ninja': { id: 'user-ninja', name: 'Ninja_007', email: 'ninja@vortex.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '6193826', bgmi_ign: 'Ninja_007' },
-  'user-sniper': { id: 'user-sniper', name: 'SniperKing', email: 'sniper@vortex.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '8294719', bgmi_ign: 'SniperKing' },
-  'user-demo': { id: 'user-demo', name: 'Demo Player', email: 'demo@vortex.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '2719483', bgmi_ign: 'Demo Player', freefire_uid: '9988776', freefire_ign: 'Demo FF' },
-  'user-hyper': { id: 'user-hyper', name: 'HyperGamer', email: 'hyper@vortex.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '7291847', bgmi_ign: 'HyperGamer' },
-  'user-spectre': { id: 'user-spectre', name: 'SpectreBGMI', email: 'spectre@vortex.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '9182736', bgmi_ign: 'SpectreBGMI' },
-  'user-viper': { id: 'user-viper', name: 'ViperSquad', email: 'viper@vortex.com', role: 'Player', verification_status: 'Verified', freefire_uid: '8172635', freefire_ign: 'ViperSquad' },
-  'user-psycho': { id: 'user-psycho', name: 'Psycho_01', email: 'psycho@vortex.com', role: 'Player', verification_status: 'Verified', freefire_uid: '6152437', freefire_ign: 'Psycho_01' },
-  'user-alpha': { id: 'user-alpha', name: 'AlphaRider', email: 'alpha@vortex.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '5142376', bgmi_ign: 'AlphaRider' },
-  'user-sumit903970gmailcom': { id: 'user-sumit903970gmailcom', name: 'sumit903970', email: 'sumit903970@gmail.com', role: 'Super Admin', verification_status: 'Verified', bgmi_character_id: '90397098', bgmi_ign: 'VORTEX_BOSS' }
+  'user-raptor': { id: 'user-raptor', name: 'Raptor_IGN', email: 'raptor@masharena.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '5129381', bgmi_ign: 'Raptor_IGN' },
+  'user-xenon': { id: 'user-xenon', name: 'XenonFF', email: 'xenon@masharena.com', role: 'Player', verification_status: 'Verified', freefire_uid: '7194827', freefire_ign: 'XenonFF' },
+  'user-ninja': { id: 'user-ninja', name: 'Ninja_007', email: 'ninja@masharena.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '6193826', bgmi_ign: 'Ninja_007' },
+  'user-sniper': { id: 'user-sniper', name: 'SniperKing', email: 'sniper@masharena.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '8294719', bgmi_ign: 'SniperKing' },
+  'user-demo': { id: 'user-demo', name: 'Demo Player', email: 'demo@masharena.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '2719483', bgmi_ign: 'Demo Player', freefire_uid: '9988776', freefire_ign: 'Demo FF' },
+  'user-hyper': { id: 'user-hyper', name: 'HyperGamer', email: 'hyper@masharena.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '7291847', bgmi_ign: 'HyperGamer' },
+  'user-spectre': { id: 'user-spectre', name: 'SpectreBGMI', email: 'spectre@masharena.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '9182736', bgmi_ign: 'SpectreBGMI' },
+  'user-viper': { id: 'user-viper', name: 'ViperSquad', email: 'viper@masharena.com', role: 'Player', verification_status: 'Verified', freefire_uid: '8172635', freefire_ign: 'ViperSquad' },
+  'user-psycho': { id: 'user-psycho', name: 'Psycho_01', email: 'psycho@masharena.com', role: 'Player', verification_status: 'Verified', freefire_uid: '6152437', freefire_ign: 'Psycho_01' },
+  'user-alpha': { id: 'user-alpha', name: 'AlphaRider', email: 'alpha@masharena.com', role: 'Player', verification_status: 'Verified', bgmi_character_id: '5142376', bgmi_ign: 'AlphaRider' },
+  'user-sumit903970gmailcom': { id: 'user-sumit903970gmailcom', name: 'sumit903970', email: 'sumit903970@gmail.com', role: 'Super Admin', verification_status: 'Verified', bgmi_character_id: '90397098', bgmi_ign: 'MASH_BOSS' }
 };
 
 // Seed initial winners
@@ -185,7 +185,7 @@ const initialWinners = [
 export const mockDb = {
   // Tournaments CRUD
   getTournaments: () => {
-    const data = getStore('vortex_tournaments', initialTournaments);
+    const data = getStore('masharena_tournaments', initialTournaments);
     if (Array.isArray(data)) {
       let changed = false;
       const merged = [...data];
@@ -196,21 +196,21 @@ export const mockDb = {
         }
       }
       if (changed) {
-        setStore('vortex_tournaments', merged);
+        setStore('masharena_tournaments', merged);
         return merged;
       }
     }
     return data;
   },
-  saveTournaments: (data: any) => setStore('vortex_tournaments', data),
+  saveTournaments: (data: any) => setStore('masharena_tournaments', data),
   
   // Tournament Rooms
-  getRooms: () => getStore('vortex_rooms', {}),
-  saveRooms: (data: any) => setStore('vortex_rooms', data),
+  getRooms: () => getStore('masharena_rooms', {}),
+  saveRooms: (data: any) => setStore('masharena_rooms', data),
 
   // Registrations
   getRegistrations: () => {
-    const data = getStore('vortex_registrations', initialRegistrations);
+    const data = getStore('masharena_registrations', initialRegistrations);
     if (Array.isArray(data)) {
       let changed = false;
       const merged = [...data];
@@ -221,25 +221,25 @@ export const mockDb = {
         }
       }
       if (changed) {
-        setStore('vortex_registrations', merged);
+        setStore('masharena_registrations', merged);
         return merged;
       }
     }
     return data;
   },
-  saveRegistrations: (data: any) => setStore('vortex_registrations', data),
+  saveRegistrations: (data: any) => setStore('masharena_registrations', data),
 
   // Wallets
-  getWallets: () => getStore('vortex_wallets', {}),
-  saveWallets: (data: any) => setStore('vortex_wallets', data),
+  getWallets: () => getStore('masharena_wallets', {}),
+  saveWallets: (data: any) => setStore('masharena_wallets', data),
 
   // Transactions
-  getTransactions: () => getStore('vortex_transactions', []),
-  saveTransactions: (data: any) => setStore('vortex_transactions', data),
+  getTransactions: () => getStore('masharena_transactions', []),
+  saveTransactions: (data: any) => setStore('masharena_transactions', data),
 
   // Withdrawals
   getWithdrawals: () => {
-    const data = getStore('vortex_withdrawals', initialWithdrawals);
+    const data = getStore('masharena_withdrawals', initialWithdrawals);
     if (Array.isArray(data)) {
       let changed = false;
       const merged = [...data];
@@ -250,17 +250,17 @@ export const mockDb = {
         }
       }
       if (changed) {
-        setStore('vortex_withdrawals', merged);
+        setStore('masharena_withdrawals', merged);
         return merged;
       }
     }
     return data;
   },
-  saveWithdrawals: (data: any) => setStore('vortex_withdrawals', data),
+  saveWithdrawals: (data: any) => setStore('masharena_withdrawals', data),
 
   // Profiles
   getProfiles: () => {
-    const data = getStore('vortex_profiles', initialProfiles);
+    const data = getStore('masharena_profiles', initialProfiles);
     if (data && typeof data === 'object') {
       let changed = false;
       const merged = { ...data };
@@ -285,29 +285,29 @@ export const mockDb = {
         }
       }
       if (changed) {
-        setStore('vortex_profiles', merged);
+        setStore('masharena_profiles', merged);
         return merged;
       }
     }
     return data;
   },
-  saveProfiles: (data: any) => setStore('vortex_profiles', data),
+  saveProfiles: (data: any) => setStore('masharena_profiles', data),
 
   // Support Tickets
-  getTickets: () => getStore('vortex_tickets', []),
-  saveTickets: (data: any) => setStore('vortex_tickets', data),
+  getTickets: () => getStore('masharena_tickets', []),
+  saveTickets: (data: any) => setStore('masharena_tickets', data),
 
   // Support Messages
-  getMessages: () => getStore('vortex_messages', []),
-  saveMessages: (data: any) => setStore('vortex_messages', data),
+  getMessages: () => getStore('masharena_messages', []),
+  saveMessages: (data: any) => setStore('masharena_messages', data),
 
   // Notifications
-  getNotifications: () => getStore('vortex_notifications', []),
-  saveNotifications: (data: any) => setStore('vortex_notifications', data),
+  getNotifications: () => getStore('masharena_notifications', []),
+  saveNotifications: (data: any) => setStore('masharena_notifications', data),
 
   // Announcements
   getAnnouncements: () => {
-    const data = getStore('vortex_announcements', initialAnnouncements);
+    const data = getStore('masharena_announcements', initialAnnouncements);
     if (Array.isArray(data)) {
       let changed = false;
       const merged = [...data];
@@ -324,41 +324,41 @@ export const mockDb = {
         }
       }
       if (changed) {
-        setStore('vortex_announcements', merged);
+        setStore('masharena_announcements', merged);
         return merged;
       }
     }
     return data;
   },
-  saveAnnouncements: (data: any) => setStore('vortex_announcements', data),
+  saveAnnouncements: (data: any) => setStore('masharena_announcements', data),
 
   // Banned Users
-  getBannedUsers: () => getStore('vortex_banned_users', {}),
-  saveBannedUsers: (data: any) => setStore('vortex_banned_users', data),
+  getBannedUsers: () => getStore('masharena_banned_users', {}),
+  saveBannedUsers: (data: any) => setStore('masharena_banned_users', data),
 
   // Ban Logs
-  getBanLogs: () => getStore('vortex_ban_logs', []),
-  saveBanLogs: (data: any) => setStore('vortex_ban_logs', data),
+  getBanLogs: () => getStore('masharena_ban_logs', []),
+  saveBanLogs: (data: any) => setStore('masharena_ban_logs', data),
 
   // Match Proofs
-  getMatchProofs: () => getStore('vortex_match_proofs', []),
-  saveMatchProofs: (data: any) => setStore('vortex_match_proofs', data),
+  getMatchProofs: () => getStore('masharena_match_proofs', []),
+  saveMatchProofs: (data: any) => setStore('masharena_match_proofs', data),
 
   // Teams
-  getTeams: () => getStore('vortex_teams', []),
-  saveTeams: (data: any) => setStore('vortex_teams', data),
+  getTeams: () => getStore('masharena_teams', []),
+  saveTeams: (data: any) => setStore('masharena_teams', data),
 
   // Team Members
-  getTeamMembers: () => getStore('vortex_team_members', []),
-  saveTeamMembers: (data: any) => setStore('vortex_team_members', data),
+  getTeamMembers: () => getStore('masharena_team_members', []),
+  saveTeamMembers: (data: any) => setStore('masharena_team_members', data),
 
   // Team Invites
-  getTeamInvites: () => getStore('vortex_team_invites', []),
-  saveTeamInvites: (data: any) => setStore('vortex_team_invites', data),
+  getTeamInvites: () => getStore('masharena_team_invites', []),
+  saveTeamInvites: (data: any) => setStore('masharena_team_invites', data),
 
   // Coupons
   getCoupons: () => {
-    const data = getStore('vortex_coupons', initialCoupons);
+    const data = getStore('masharena_coupons', initialCoupons);
     if (Array.isArray(data)) {
       let changed = false;
       const merged = [...data];
@@ -369,25 +369,25 @@ export const mockDb = {
         }
       }
       if (changed) {
-        setStore('vortex_coupons', merged);
+        setStore('masharena_coupons', merged);
         return merged;
       }
     }
     return data;
   },
-  saveCoupons: (data: any) => setStore('vortex_coupons', data),
+  saveCoupons: (data: any) => setStore('masharena_coupons', data),
 
   // Coupon Usage
-  getCouponUsage: () => getStore('vortex_coupon_usage', []),
-  saveCouponUsage: (data: any) => setStore('vortex_coupon_usage', data),
+  getCouponUsage: () => getStore('masharena_coupon_usage', []),
+  saveCouponUsage: (data: any) => setStore('masharena_coupon_usage', data),
 
   // Audit Logs
-  getAuditLogs: () => getStore('vortex_audit_logs', []),
-  saveAuditLogs: (data: any) => setStore('vortex_audit_logs', data),
+  getAuditLogs: () => getStore('masharena_audit_logs', []),
+  saveAuditLogs: (data: any) => setStore('masharena_audit_logs', data),
 
   // Winners
   getWinners: () => {
-    const data = getStore('vortex_winners', initialWinners);
+    const data = getStore('masharena_winners', initialWinners);
     let changed = false;
     let merged = Array.isArray(data) ? [...data] : [];
     
@@ -401,8 +401,8 @@ export const mockDb = {
 
     // 2. Retroactive fix: Scan transaction logs for Prize Credits and reconstruct missing winner entries
     try {
-      const txs = getStore('vortex_transactions', []);
-      const wallets = getStore('vortex_wallets', {});
+      const txs = getStore('masharena_transactions', []);
+      const wallets = getStore('masharena_wallets', {});
       
       // Create a map of wallet_id to user_id
       const walletToUser: Record<string, string> = {};
@@ -445,23 +445,23 @@ export const mockDb = {
     }
 
     if (changed) {
-      setStore('vortex_winners', merged);
+      setStore('masharena_winners', merged);
     }
     return merged;
   },
-  saveWinners: (data: any) => setStore('vortex_winners', data),
+  saveWinners: (data: any) => setStore('masharena_winners', data),
 
   // Leaderboard Overrides
-  getLeaderboardOverrides: () => getStore('vortex_leaderboard_overrides', []),
-  saveLeaderboardOverrides: (data: any) => setStore('vortex_leaderboard_overrides', data),
+  getLeaderboardOverrides: () => getStore('masharena_leaderboard_overrides', []),
+  saveLeaderboardOverrides: (data: any) => setStore('masharena_leaderboard_overrides', data),
 
   // Leaderboard Hidden Players
-  getLeaderboardHidden: () => getStore('vortex_leaderboard_hidden', []),
-  saveLeaderboardHidden: (data: string[]) => setStore('vortex_leaderboard_hidden', data),
+  getLeaderboardHidden: () => getStore('masharena_leaderboard_hidden', []),
+  saveLeaderboardHidden: (data: string[]) => setStore('masharena_leaderboard_hidden', data),
 
   // Payment QR Code Settings
-  getPaymentQr: () => getStore('vortex_payment_qr', '/payment_qr.jpg'),
-  savePaymentQr: (url: string) => setStore('vortex_payment_qr', url),
+  getPaymentQr: () => getStore('masharena_payment_qr', '/payment_qr.jpg'),
+  savePaymentQr: (url: string) => setStore('masharena_payment_qr', url),
 };
 
 export interface LeaderboardPlayer {
