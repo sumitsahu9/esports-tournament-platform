@@ -34,7 +34,7 @@ export default function RefundsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-zinc-100 uppercase tracking-wide">1. Registration Fee Refunds</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              Vortex operates on an esports match coordination model. Tournament entry fees are non-refundable once slot bookings are completed, except in the following scenarios:
+              Mash Arena operates on an esports match coordination model. Tournament entry fees are non-refundable once slot bookings are completed, except in the following scenarios:
             </p>
             <ul className="list-disc pl-5 text-sm text-zinc-400 space-y-1.5 mt-2">
               <li>The tournament is cancelled or rescheduled by the platform administrators.</li>
@@ -63,7 +63,7 @@ export default function RefundsPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-zinc-100 uppercase tracking-wide">4. Wallet Deposits</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              Deposits added to your Vortex wallet are for platform match play credits only. Mock deposits are dummy test funds and carry no cash value. For actual production deployments, deposit balances are strictly non-refundable and non-withdrawable.
+              Deposits added to your Mash Arena wallet are for platform match play credits only. Mock deposits are dummy test funds and carry no cash value. For actual production deployments, deposit balances are strictly non-refundable and non-withdrawable.
             </p>
           </section>
         </motion.div>
