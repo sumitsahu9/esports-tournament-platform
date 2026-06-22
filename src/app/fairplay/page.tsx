@@ -22,7 +22,7 @@ export default function FairPlayPage() {
             Fair Play Policy
           </h1>
           <p className="text-zinc-500 text-xs sm:text-sm mt-2 font-mono">
-            Vortex Anti-Cheat Security & Integrity Guidelines
+            Mash Arena Anti-Cheat Security & Integrity Guidelines
           </p>
         </div>
 
@@ -34,7 +34,7 @@ export default function FairPlayPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-zinc-100 uppercase tracking-wide">Competitive Integrity Promise</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              Vortex is built by gamers, for gamers. We believe esports should be a pure display of skill, tactical coordination, and dedication. To ensure a 100% fair and level playing field, we enforce a strict competitive integrity framework.
+              Mash Arena is built by gamers, for gamers. We believe esports should be a pure display of skill, tactical coordination, and dedication. To ensure a 100% fair and level playing field, we enforce a strict competitive integrity framework.
             </p>
           </section>
 
