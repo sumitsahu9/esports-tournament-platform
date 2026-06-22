@@ -28,7 +28,7 @@ interface Tournament {
 const mockTournaments: Tournament[] = [
   {
     id: 'bgmi-squad-1',
-    title: 'Vortex BGMI Squad Showdown',
+    title: 'Mash Arena BGMI Squad Showdown',
     game: 'BGMI',
     mode: 'Squad',
     entry_fee: 50,
@@ -68,10 +68,10 @@ const mockTournaments: Tournament[] = [
 ];
 
 const mockWinners = [
-  { name: 'Raptor_IGN', amount: 1250, tournament: 'Vortex BGMI Squad Showdown', game: 'BGMI', rank: 1 },
+  { name: 'Raptor_IGN', amount: 1250, tournament: 'Mash Arena BGMI Squad Showdown', game: 'BGMI', rank: 1 },
   { name: 'XenonFF', amount: 750, tournament: 'Free Fire Solo Clash Royale', game: 'Free Fire', rank: 1 },
   { name: 'Ninja_007', amount: 500, tournament: 'BGMI Duo Marksman Cup', game: 'BGMI', rank: 2 },
-  { name: 'SniperKing', amount: 300, tournament: 'Vortex BGMI Squad Showdown', game: 'BGMI', rank: 3 },
+  { name: 'SniperKing', amount: 300, tournament: 'Mash Arena BGMI Squad Showdown', game: 'BGMI', rank: 3 },
 ];
 
 const mockLeaderboard = {
@@ -114,7 +114,7 @@ const mockLeaderboard = {
 };
 
 const mockActivities = [
-  'Player Raptor_IGN just registered for Vortex BGMI Squad Showdown',
+  'Player Raptor_IGN just registered for Mash Arena BGMI Squad Showdown',
   'Withdrawal of ₹500 successfully approved for user sumit903970@gmail.com',
   'Gamer XenonFF secured Rank 1 in Free Fire Solo Clash Royale winning ₹750',
   'New tournament "Free Fire Duo Rush" created by administrator',
@@ -338,7 +338,7 @@ export default function LandingPage() {
       // Setup real-time activity marquee simulation
       const interval = setInterval(() => {
         const users = ['Ninja_007', 'GhostRider', 'Raptor_IGN', 'GamerGod', 'XenonFF', 'Spectre_BGMI'];
-        const games = ['Vortex BGMI Squad Showdown', 'Free Fire Solo Clash Royale', 'BGMI Duo Marksman Cup'];
+        const games = ['Mash Arena BGMI Squad Showdown', 'Free Fire Solo Clash Royale', 'BGMI Duo Marksman Cup'];
         const actions = [
           `Player ${users[Math.floor(Math.random() * users.length)]} check-in completed for ${games[Math.floor(Math.random() * games.length)]}`,
           `Player ${users[Math.floor(Math.random() * users.length)]} registered for ${games[Math.floor(Math.random() * games.length)]}`,
@@ -615,7 +615,7 @@ export default function LandingPage() {
               Public Leaderboard
             </h2>
             <p className="text-xs sm:text-sm text-zinc-400">
-              The top elite players inside Vortex arena. Leaderboards calculate daily.
+              The top elite players inside Mash Arena. Leaderboards calculate daily.
             </p>
             
             {/* Tabs Headers */}
@@ -938,7 +938,7 @@ export default function LandingPage() {
                       <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Verified Payout</span>
                       <h3 className="font-extrabold text-sm text-zinc-155 flex items-center gap-1.5">
                         <Trophy className="w-4 h-4 text-purple-400" />
-                        Vortex Esports Arena
+                        Mash Arena
                       </h3>
                     </div>
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/50 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.15)]">
