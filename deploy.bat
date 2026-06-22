@@ -1,6 +1,6 @@
 @echo off
 echo ===================================================
-echo   Vortex Esports - Auto Deploy to GitHub
+echo   Mash Arena - Auto Deploy to GitHub
 echo ===================================================
 echo.
 echo 1. Staging changes...
