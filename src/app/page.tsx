@@ -938,7 +938,7 @@ export default function LandingPage() {
                       <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Verified Payout</span>
                       <h3 className="font-extrabold text-sm text-zinc-155 flex items-center gap-1.5">
                         <Trophy className="w-4 h-4 text-purple-400" />
-                        Vortex Esports Arena
+                        VortexPro Arena
                       </h3>
                     </div>
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/50 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.15)]">
