@@ -994,114 +994,8 @@ export default function DashboardPage() {
 
     if (depositStep === 1) {
       setFormError(null);
-
-      // In mock mode, proceed directly to manual payment step
-      if (isMockEnabled) {
-        setDepositStep(2);
-        return;
-      }
-
-      // Supabase mode: attempt automated Razorpay checkout
-      setActionLoading(true);
-      try {
-        const scriptLoaded = await loadRazorpayScript();
-        if (!scriptLoaded) {
-          throw new Error('Razorpay SDK failed to load');
-        }
-
-        // Get user session token for secure API call authorization
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        if (!token) {
-          throw new Error('User session not found');
-        }
-
-        // 1. Create Razorpay order in backend
-        const orderRes = await fetch('/api/razorpay/order', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ amount })
-        });
-
-        if (!orderRes.ok) {
-          throw new Error('Failed to create payment order');
-        }
-
-        const order = await orderRes.json();
-
-        // 2. Open Razorpay checkout popup
-        const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_MashArenaDevDummyKeyId',
-          amount: order.amount,
-          currency: order.currency,
-          name: 'MASH ARENA PRO',
-          description: `Wallet Deposit (₹${amount})`,
-          order_id: order.id,
-          handler: async function (response: any) {
-            setActionLoading(true);
-            try {
-              // 3. Verify Razorpay cryptographic signature in backend
-              const verifyRes = await fetch('/api/razorpay/verify', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  amount,
-                  mock: order.mock
-                })
-              });
-
-              if (!verifyRes.ok) {
-                const errData = await verifyRes.json();
-                throw new Error(errData.error || 'Signature verification failed');
-              }
-
-              alert(`Payment successful! ₹${amount} has been added to your wallet.`);
-              setDepositAmount('');
-              setDepositStep(1);
-              await refreshWallet();
-              await fetchDashboardData();
-            } catch (err: any) {
-              alert(`Verification Error: ${err.message}`);
-              setFormError(err.message);
-            } finally {
-              setActionLoading(false);
-            }
-          },
-          prefill: {
-            name: profile?.name || '',
-            email: user?.email || '',
-            contact: profile?.phone_number || ''
-          },
-          theme: {
-            color: '#9333ea'
-          },
-          modal: {
-            ondismiss: function () {
-              setActionLoading(false);
-            }
-          }
-        };
-
-        const paymentObject = new (window as any).Razorpay(options);
-        paymentObject.open();
-        return;
-      } catch (err: any) {
-        console.warn('Razorpay checkout failed, falling back to manual UPI deposit:', err);
-        // Fallback to manual QR payment step
-        setDepositStep(2);
-        setActionLoading(false);
-        return;
-      }
+      setDepositStep(2);
+      return;
     }
 
     // Step 2: Validate reference ID (must be exactly 12 digits)
@@ -1633,7 +1527,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-zinc-400">
                     {depositStep === 1 
                       ? "Enter the amount of funds you wish to deposit to your wallet." 
-                      : "Scan the QR code below to pay, then submit the 12-digit UTR number/UPI Ref No/Transaction ID."}
+                      : "Scan the QR code below using any UPI app (GPay, PhonePe, Paytm, etc.) to pay, then submit the 12-digit UTR / UPI Reference Number."}
                   </p>
 
                   <form onSubmit={handleDeposit} className="space-y-3">
