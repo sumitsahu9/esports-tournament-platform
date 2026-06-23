@@ -6,8 +6,9 @@ export async function POST(request: NextRequest) {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amount, mock } = await request.json();
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jzrrqkfhzcfyyoreiapa.supabase.co';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_2MpBGXEugKt9tJ9mMuQKlw_6rzglh69';
+
 
     // Extract authorization bearer token (Supabase User JWT)
     const authHeader = request.headers.get('authorization') || '';

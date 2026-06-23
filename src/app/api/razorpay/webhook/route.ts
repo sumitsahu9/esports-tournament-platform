@@ -49,7 +49,7 @@ async function processWebhookEvent(payload: any) {
     const paymentId = payment.id;
     const amountInRupees = payment.amount / 100; // Razorpay provides amount in paise
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jzrrqkfhzcfyyoreiapa.supabase.co';
     // Webhook runs asynchronously without user session. It requires the service_role key to bypass RLS policies
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
@@ -101,7 +101,7 @@ async function processWebhookEvent(payload: any) {
     const payment = payload.payload.payment.entity;
     const orderId = payment.order_id;
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jzrrqkfhzcfyyoreiapa.supabase.co';
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
     if (supabaseServiceKey) {
