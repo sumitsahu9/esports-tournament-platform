@@ -232,8 +232,34 @@ export default function AdminPanelPage() {
     if (!editingTournament) return;
     setBtnLoading(true);
     try {
+      // 1. Title validation
+      const cleanTitle = editTitle.trim();
+      if (!cleanTitle) {
+        throw new Error('Tournament title is required.');
+      }
+
+      // 2. Fee validation
       const fee = Number(editFee);
+      if (isNaN(fee) || fee < 0) {
+        throw new Error('Entry fee must be a valid non-negative number.');
+      }
+
+      // 3. Slots validation
       const slots = Number(editSlots);
+      if (isNaN(slots) || !Number.isInteger(slots) || slots <= 0) {
+        throw new Error('Total slots must be a valid positive integer.');
+      }
+
+      // 4. Date validation
+      if (!editTime) {
+        throw new Error('Please select a valid match start time.');
+      }
+      const parsedDate = new Date(editTime);
+      if (isNaN(parsedDate.getTime())) {
+        throw new Error('Invalid match start time.');
+      }
+      const startTimeISO = parsedDate.toISOString();
+
       const calculatedPool = 0.50 * (fee * slots);
 
       if (isMockEnabled) {
@@ -242,12 +268,12 @@ export default function AdminPanelPage() {
         if (tIdx !== -1) {
           list[tIdx] = {
             ...list[tIdx],
-            title: editTitle,
+            title: cleanTitle,
             game: editGame,
             mode: editMode,
             entry_fee: fee,
             total_slots: slots,
-            start_time: new Date(editTime).toISOString(),
+            start_time: startTimeISO,
             prize_pool: calculatedPool,
             rules: editRules,
             status: editStatus
@@ -264,12 +290,12 @@ export default function AdminPanelPage() {
       const { error } = await supabase
         .from('tournaments')
         .update({
-          title: editTitle,
+          title: cleanTitle,
           game: editGame,
           mode: editMode,
           entry_fee: fee,
           total_slots: slots,
-          start_time: new Date(editTime).toISOString(),
+          start_time: startTimeISO,
           prize_pool: calculatedPool,
           rules: editRules,
           status: editStatus
@@ -1475,8 +1501,33 @@ export default function AdminPanelPage() {
     setBtnLoading(true);
 
     try {
+      // 1. Title validation
+      const cleanTitle = tourneyTitle.trim();
+      if (!cleanTitle) {
+        throw new Error('Tournament title is required.');
+      }
+
+      // 2. Fee validation
       const fee = Number(tourneyFee);
+      if (isNaN(fee) || fee < 0) {
+        throw new Error('Entry fee must be a valid non-negative number.');
+      }
+
+      // 3. Slots validation
       const slots = Number(tourneySlots);
+      if (isNaN(slots) || !Number.isInteger(slots) || slots <= 0) {
+        throw new Error('Total slots must be a valid positive integer.');
+      }
+
+      // 4. Date validation
+      if (!tourneyTime) {
+        throw new Error('Please select a valid match start time.');
+      }
+      const parsedDate = new Date(tourneyTime);
+      if (isNaN(parsedDate.getTime())) {
+        throw new Error('Invalid match start time.');
+      }
+      const startTimeISO = parsedDate.toISOString();
       
       // Automated prize pool calculation for initial value (100 players * entry fee = collection, 50% = pool)
       const calculatedPool = 0.50 * (fee * slots);
@@ -1485,13 +1536,13 @@ export default function AdminPanelPage() {
         const list = mockDb.getTournaments();
         const newTourney = {
           id: `mock-tourney-${Date.now()}`,
-          title: tourneyTitle,
+          title: cleanTitle,
           game: tourneyGame,
           mode: tourneyMode,
           entry_fee: fee,
           total_slots: slots,
           filled_slots: 0,
-          start_time: new Date(tourneyTime).toISOString(),
+          start_time: startTimeISO,
           prize_pool: calculatedPool,
           rules: tourneyRules,
           status: 'Upcoming',
@@ -1515,12 +1566,12 @@ export default function AdminPanelPage() {
       const { data, error } = await supabase
         .from('tournaments')
         .insert({
-          title: tourneyTitle,
+          title: cleanTitle,
           game: tourneyGame,
           mode: tourneyMode,
           entry_fee: fee,
           total_slots: slots,
-          start_time: new Date(tourneyTime).toISOString(),
+          start_time: startTimeISO,
           prize_pool: calculatedPool,
           rules: tourneyRules,
           status: 'Upcoming'

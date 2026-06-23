@@ -303,8 +303,8 @@ export default function LandingPage() {
           setTournaments(tData as Tournament[]);
           currentTourneys = tData;
         } else {
-          setTournaments(mockTournaments);
-          currentTourneys = mockTournaments;
+          setTournaments([]);
+          currentTourneys = [];
         }
 
         // 2. Fetch withdrawals for proofs showcase
@@ -323,8 +323,13 @@ export default function LandingPage() {
 
     } catch (err) {
       console.error('Error fetching landing data:', err);
-      setTournaments(mockTournaments);
-      await loadLeaderboardAndActivities(mockTournaments);
+      if (isMockEnabled) {
+        setTournaments(mockTournaments);
+        await loadLeaderboardAndActivities(mockTournaments);
+      } else {
+        setTournaments([]);
+        await loadLeaderboardAndActivities([]);
+      }
     } finally {
       setLoading(false);
     }
