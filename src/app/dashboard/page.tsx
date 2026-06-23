@@ -336,7 +336,7 @@ export default function DashboardPage() {
         const { data: invitesData } = await supabase
           .from('team_invites')
           .select('*')
-          .eq('invitee_email', user.email)
+          .eq('invitee_email', user.email?.toLowerCase())
           .eq('status', 'Pending');
         if (invitesData) setTeamInvites(invitesData);
       } catch (inviteErr) {
@@ -659,6 +659,18 @@ export default function DashboardPage() {
       }
 
       // Supabase flow
+      const { data: existingMember } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingMember) {
+        setTeamError('You are already in a team! Leave or disband it first.');
+        setActionLoading(false);
+        return;
+      }
+
       const { data: teamData, error: teamErrorVal } = await supabase
         .from('teams')
         .insert({
@@ -808,7 +820,7 @@ export default function DashboardPage() {
       const { data: inviteeProfiles, error: searchError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('email', inviteEmail.trim())
+        .ilike('email', inviteEmail.trim())
         .maybeSingle();
 
       if (searchError || !inviteeProfiles) {
@@ -892,6 +904,18 @@ export default function DashboardPage() {
       }
 
       // Supabase flow
+      const { data: userMemberCheck } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (userMemberCheck) {
+        setTeamError('You are already in a team! Leave it first.');
+        setActionLoading(false);
+        return;
+      }
+
       const { error: joinError } = await supabase
         .from('team_members')
         .insert({
@@ -1272,6 +1296,7 @@ export default function DashboardPage() {
 
         alert('Profile updated successfully!');
         await refreshProfile();
+        await fetchDashboardData();
         return;
       }
 
@@ -1292,6 +1317,7 @@ export default function DashboardPage() {
 
       alert('Profile updated successfully!');
       await refreshProfile();
+      await fetchDashboardData();
     } catch (err: any) {
       console.error(err);
       setFormError(err.message || 'Failed to update profile');
@@ -2016,16 +2042,16 @@ export default function DashboardPage() {
                         {teamMembers.map((m) => (
                           <div key={m.id} className="p-4 flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
-                              {m.profile.profile_picture ? (
+                              {m.profile?.profile_picture ? (
                                 <img src={m.profile.profile_picture} className="w-8 h-8 rounded-full object-cover" />
                               ) : (
                                 <div className="w-8 h-8 rounded-full bg-purple-950/30 border border-purple-500/10 flex items-center justify-center text-xs font-bold text-purple-400">
-                                  {m.profile.name[0].toUpperCase()}
+                                  {(m.profile?.name || 'Player')[0].toUpperCase()}
                                 </div>
                               )}
                               <div>
-                                <div className="text-sm font-bold text-zinc-200">{m.profile.name}</div>
-                                <div className="text-[10px] text-zinc-555">{m.profile.email}</div>
+                                <div className="text-sm font-bold text-zinc-200">{m.profile?.name || 'Player'}</div>
+                                <div className="text-[10px] text-zinc-555">{m.profile?.email || ''}</div>
                               </div>
                             </div>
                             <span className={`px-2.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${

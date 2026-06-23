@@ -23,8 +23,6 @@ drop function if exists public.confirm_deposit(text, text, numeric) cascade;
 drop function if exists public.admin_confirm_deposit(uuid, text, text, numeric) cascade;
 drop function if exists public.request_manual_deposit(numeric, text) cascade;
 drop function if exists public.ensure_profile_and_wallet() cascade;
-drop function if exists public.admin_process_deposit(uuid, boolean) cascade;
-
 
 drop table if exists public.leaderboard_overrides cascade;
 drop table if exists public.leaderboard_hidden cascade;
@@ -570,7 +568,7 @@ create policy "Players Join Teams" on public.team_members for insert with check 
 -- Team Invites
 drop policy if exists "Players Read Own Team Invites" on public.team_invites;
 create policy "Players Read Own Team Invites" on public.team_invites for select using (
-    invitee_email = (select email from public.profiles where id = auth.uid())
+    lower(invitee_email) = lower((select email from public.profiles where id = auth.uid()))
 );
 drop policy if exists "Captains Insert Team Invites" on public.team_invites;
 create policy "Captains Insert Team Invites" on public.team_invites for insert with check (
@@ -578,7 +576,7 @@ create policy "Captains Insert Team Invites" on public.team_invites for insert w
 );
 drop policy if exists "Invitee Respond Invites" on public.team_invites;
 create policy "Invitee Respond Invites" on public.team_invites for update using (
-    invitee_email = (select email from public.profiles where id = auth.uid())
+    lower(invitee_email) = lower((select email from public.profiles where id = auth.uid()))
 );
 
 -- Teams
@@ -1356,131 +1354,4 @@ begin
   );
 end;
 $$ language plpgsql security definer;
-
--- Function: Admin process deposits requests (Approve or Reject/Deduct)
-create or replace function public.admin_process_deposit(
-  p_tx_id uuid,
-  p_approve boolean
-)
-returns json as $$
-declare
-  v_operator_role text;
-  v_wallet_id uuid;
-  v_amount numeric;
-  v_status text;
-  v_deposit_id uuid;
-  v_user_id uuid;
-  v_log_action text;
-begin
-  -- Validate operator permissions
-  select role into v_operator_role from public.profiles where id = auth.uid();
-  if v_operator_role not in ('Super Admin', 'Moderator') then
-    raise exception 'Unauthorized: Only admins or moderators can process deposits';
-  end if;
-
-  -- Lock transaction request record
-  select wallet_id, amount, status, reference_id into v_wallet_id, v_amount, v_status, v_deposit_id 
-  from public.transactions 
-  where id = p_tx_id for update;
-
-  if not found then
-    raise exception 'Transaction not found';
-  end if;
-
-  -- Lock wallet and retrieve user_id
-  select user_id into v_user_id from public.wallets where id = v_wallet_id for update;
-
-  if v_status = 'Pending' then
-    if p_approve = true then
-      v_log_action := 'Approve';
-      update public.transactions set status = 'Completed', updated_at = now() where id = p_tx_id;
-      if v_deposit_id is not null then
-        update public.deposits set status = 'Completed', updated_at = now() where id = v_deposit_id;
-      end if;
-      
-      -- Send notification
-      insert into public.notifications (user_id, title, message, type)
-      values (
-        v_user_id,
-        'Deposit Approved',
-        'Your manual deposit of ₹' || v_amount || ' has been verified and approved.',
-        'Deposit Approved'
-      );
-    else
-      v_log_action := 'Reject';
-      update public.transactions set status = 'Failed', updated_at = now() where id = p_tx_id;
-      if v_deposit_id is not null then
-        update public.deposits set status = 'Failed', updated_at = now() where id = v_deposit_id;
-      end if;
-      
-      -- Deduct balance
-      update public.wallets set deposit_balance = deposit_balance - v_amount where id = v_wallet_id;
-      
-      -- Send notification
-      insert into public.notifications (user_id, title, message, type)
-      values (
-        v_user_id,
-        'Deposit Rejected',
-        'Your manual deposit of ₹' || v_amount || ' was rejected by the administrator.',
-        'Deposit Rejected'
-      );
-    end if;
-  elsif v_status = 'Completed' then
-    if p_approve = false then
-      v_log_action := 'Reject';
-      update public.transactions set status = 'Failed', updated_at = now() where id = p_tx_id;
-      if v_deposit_id is not null then
-        update public.deposits set status = 'Failed', updated_at = now() where id = v_deposit_id;
-      end if;
-      
-      -- Deduct balance
-      update public.wallets set deposit_balance = deposit_balance - v_amount where id = v_wallet_id;
-      
-      -- Send notification
-      insert into public.notifications (user_id, title, message, type)
-      values (
-        v_user_id,
-        'Deposit Rejected',
-        'Your completed deposit of ₹' || v_amount || ' has been rejected/reverted by the administrator.',
-        'Deposit Reverted'
-      );
-    end if;
-  elsif v_status = 'Failed' then
-    if p_approve = true then
-      v_log_action := 'Approve';
-      update public.transactions set status = 'Completed', updated_at = now() where id = p_tx_id;
-      if v_deposit_id is not null then
-        update public.deposits set status = 'Completed', updated_at = now() where id = v_deposit_id;
-      end if;
-      
-      -- Re-add balance
-      update public.wallets set deposit_balance = deposit_balance + v_amount where id = v_wallet_id;
-      
-      -- Send notification
-      insert into public.notifications (user_id, title, message, type)
-      values (
-        v_user_id,
-        'Deposit Approved',
-        'Your previously rejected deposit of ₹' || v_amount || ' has now been approved and credited.',
-        'Deposit Approved'
-      );
-    end if;
-  end if;
-
-  -- Log action in audit log
-  if v_log_action is not null then
-    insert into public.audit_logs (action_by, action, target_type, target_id, details)
-    values (
-      auth.uid(),
-      v_log_action || ' Deposit',
-      'Deposit',
-      p_tx_id::text,
-      'Processed deposit transaction of ₹' || v_amount
-    );
-  end if;
-
-  return json_build_object('success', true);
-end;
-$$ language plpgsql security definer;
-
 
