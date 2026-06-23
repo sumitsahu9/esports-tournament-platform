@@ -62,6 +62,8 @@ interface Registration {
   check_in_status?: 'Checked In' | 'Pending' | 'DNQ';
   profiles?: {
     name: string;
+    email?: string;
+    phone_number?: string;
   };
 }
 
@@ -1240,7 +1242,8 @@ export default function AdminPanelPage() {
         const mappedRegs = regs.map((r: any) => ({
           ...r,
           profiles: {
-            name: profilesMap[r.user_id]?.name || 'Player'
+            name: profilesMap[r.user_id]?.name || 'Player',
+            email: profilesMap[r.user_id]?.email || ''
           }
         }));
         setRegsForSelectedTourney(mappedRegs);
@@ -1248,7 +1251,7 @@ export default function AdminPanelPage() {
       }
       const { data } = await supabase
         .from('registrations')
-        .select('*, profiles(name)')
+        .select('*, profiles(name, email)')
         .eq('tournament_id', selectedTourneyId);
       if (data) {
         setRegsForSelectedTourney(data as any[]);
@@ -2945,6 +2948,7 @@ export default function AdminPanelPage() {
                         <thead>
                           <tr className="border-b border-zinc-900 text-zinc-550 font-bold uppercase bg-zinc-950/40">
                             <th className="p-3">Player name</th>
+                            <th className="p-3">Game UID</th>
                             <th className="p-3">In-Game IGN</th>
                             <th className="p-3 text-center">Status</th>
                             <th className="p-3 text-center">Action</th>
@@ -2957,8 +2961,12 @@ export default function AdminPanelPage() {
                             return r.check_in_status === checkInFilter;
                           }).map((r) => (
                             <tr key={r.id} className="text-zinc-350 hover:bg-zinc-900/10">
-                              <td className="p-3 font-semibold text-zinc-200">{r.profiles?.name || 'Player'}</td>
-                              <td className="p-3 font-mono">{r.ign}</td>
+                              <td className="p-3">
+                                <div className="font-semibold text-zinc-200">{r.profiles?.name || 'Player'}</div>
+                                <div className="text-[10px] text-zinc-550 font-mono mt-0.5">{r.profiles?.email || 'N/A'}</div>
+                              </td>
+                              <td className="p-3 font-mono text-zinc-400">{r.game_id}</td>
+                              <td className="p-3 font-mono text-zinc-300">{r.ign}</td>
                               <td className="p-3 text-center">
                                 <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
                                   r.check_in_status === 'Checked In'
