@@ -22,6 +22,7 @@ drop function if exists public.process_withdrawal(uuid, boolean, text) cascade;
 drop function if exists public.confirm_deposit(text, text, numeric) cascade;
 drop function if exists public.admin_confirm_deposit(uuid, text, text, numeric) cascade;
 drop function if exists public.request_manual_deposit(numeric, text) cascade;
+drop function if exists public.ensure_profile_and_wallet() cascade;
 
 drop table if exists public.leaderboard_overrides cascade;
 drop table if exists public.leaderboard_hidden cascade;
@@ -1279,3 +1280,78 @@ begin
   );
 end;
 $$ language plpgsql security definer;
+
+-- Function: Ensure user profile and wallet exist (self-healing user details sync)
+create or replace function public.ensure_profile_and_wallet()
+returns json as $$
+declare
+  v_user_id uuid;
+  v_email text;
+  v_name text;
+  v_phone text;
+  v_bgmi_char text;
+  v_bgmi_ign text;
+  v_ff_uid text;
+  v_ff_ign text;
+  v_profile_exists boolean;
+  v_wallet_exists boolean;
+begin
+  v_user_id := auth.uid();
+  if v_user_id is null then
+    raise exception 'Unauthorized';
+  end if;
+
+  -- Get user email from auth.users
+  select email, 
+         coalesce(raw_user_meta_data->>'name', split_part(email, '@', 1)),
+         raw_user_meta_data->>'phone_number',
+         raw_user_meta_data->>'bgmi_character_id',
+         raw_user_meta_data->>'bgmi_ign',
+         raw_user_meta_data->>'freefire_uid',
+         raw_user_meta_data->>'freefire_ign'
+  into v_email, v_name, v_phone, v_bgmi_char, v_bgmi_ign, v_ff_uid, v_ff_ign
+  from auth.users
+  where id = v_user_id;
+
+  -- Check if profile exists
+  select exists(select 1 from public.profiles where id = v_user_id) into v_profile_exists;
+  
+  if not v_profile_exists then
+    insert into public.profiles (
+      id, name, email, phone_number, 
+      bgmi_character_id, bgmi_ign, freefire_uid, freefire_ign,
+      is_admin, role
+    ) values (
+      v_user_id, v_name, v_email, v_phone,
+      v_bgmi_char, v_bgmi_ign, v_ff_uid, v_ff_ign,
+      case when v_email = 'sumit903970@gmail.com' then true else false end,
+      case when v_email = 'sumit903970@gmail.com' then 'Super Admin' else 'Player' end
+    );
+  else
+    -- Self-heal profile by syncing fields that are in auth.users metadata but missing in profiles
+    update public.profiles
+    set 
+      phone_number = coalesce(phone_number, v_phone),
+      bgmi_character_id = coalesce(bgmi_character_id, v_bgmi_char),
+      bgmi_ign = coalesce(bgmi_ign, v_bgmi_ign),
+      freefire_uid = coalesce(freefire_uid, v_ff_uid),
+      freefire_ign = coalesce(freefire_ign, v_ff_ign)
+    where id = v_user_id;
+  end if;
+
+  -- Check if wallet exists
+  select exists(select 1 from public.wallets where user_id = v_user_id) into v_wallet_exists;
+
+  if not v_wallet_exists then
+    insert into public.wallets (user_id, deposit_balance, winning_balance, bonus_balance)
+    values (v_user_id, 0, 0, 0);
+  end if;
+
+  return json_build_object(
+    'success', true, 
+    'profile_created', not v_profile_exists, 
+    'wallet_created', not v_wallet_exists
+  );
+end;
+$$ language plpgsql security definer;
+

@@ -1,10 +1,8 @@
 'use client';
 
 // Centralized LocalStorage Mock Database for offline/demo testing
-export const isMockEnabled = typeof window !== 'undefined' && 
-  (!process.env.NEXT_PUBLIC_SUPABASE_URL || 
-   process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your-project') || 
-   process.env.NEXT_PUBLIC_SUPABASE_URL === '');
+export const isMockEnabled = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+
 
 // Helper to get/set data
 const getStore = (key: string, fallback: any) => {

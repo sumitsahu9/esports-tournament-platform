@@ -157,6 +157,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setUser(session.user);
+          try {
+            await supabase.rpc('ensure_profile_and_wallet');
+          } catch (rpcErr) {
+            console.error('Failed to ensure profile and wallet:', rpcErr);
+          }
           await Promise.all([
             refreshProfile(session.user.id),
             refreshWallet(session.user.id)
@@ -172,6 +177,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         async (event, session) => {
           if (session?.user) {
             setUser(session.user);
+            try {
+              await supabase.rpc('ensure_profile_and_wallet');
+            } catch (rpcErr) {
+              console.error('Failed to ensure profile and wallet:', rpcErr);
+            }
             await Promise.all([
               refreshProfile(session.user.id),
               refreshWallet(session.user.id)
