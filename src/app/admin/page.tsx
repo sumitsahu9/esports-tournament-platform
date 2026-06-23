@@ -1764,86 +1764,12 @@ export default function AdminPanelPage() {
       }
 
       // Supabase mode
-      const { data: tx, error: txError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('id', txId)
-        .single();
-      if (txError || !tx) throw new Error('Transaction not found');
+      const { data, error } = await supabase.rpc('admin_process_deposit', {
+        p_tx_id: txId,
+        p_approve: approve
+      });
 
-      const prevStatus = tx.status;
-
-      if (prevStatus === 'Pending') {
-        if (approve) {
-          const { error: updateTxError } = await supabase
-            .from('transactions')
-            .update({ status: 'Completed' })
-            .eq('id', txId);
-          if (updateTxError) throw updateTxError;
-          // Balance was already added instantly, do nothing
-        } else {
-          const { error: updateTxError } = await supabase
-            .from('transactions')
-            .update({ status: 'Failed' })
-            .eq('id', txId);
-          if (updateTxError) throw updateTxError;
-
-          // Fetch wallet and deduct balance
-          const { data: wallet, error: walletError } = await supabase
-            .from('wallets')
-            .select('*')
-            .eq('id', tx.wallet_id)
-            .single();
-          if (walletError || !wallet) throw new Error('Wallet not found');
-
-          const { error: updateWalletError } = await supabase
-            .from('wallets')
-            .update({ deposit_balance: Number(wallet.deposit_balance) - Number(tx.amount) })
-            .eq('id', tx.wallet_id);
-          if (updateWalletError) throw updateWalletError;
-        }
-      } else if (prevStatus === 'Completed' && !approve) {
-        // Change from Completed to Failed (Deduct balance)
-        const { error: updateTxError } = await supabase
-          .from('transactions')
-          .update({ status: 'Failed' })
-          .eq('id', txId);
-        if (updateTxError) throw updateTxError;
-
-        const { data: wallet, error: walletError } = await supabase
-          .from('wallets')
-          .select('*')
-          .eq('id', tx.wallet_id)
-          .single();
-        if (walletError || !wallet) throw new Error('Wallet not found');
-
-        const { error: updateWalletError } = await supabase
-          .from('wallets')
-          .update({ deposit_balance: Number(wallet.deposit_balance) - Number(tx.amount) })
-          .eq('id', tx.wallet_id);
-        if (updateWalletError) throw updateWalletError;
-
-      } else if (prevStatus === 'Failed' && approve) {
-        // Change from Failed to Completed (Add balance back)
-        const { error: updateTxError } = await supabase
-          .from('transactions')
-          .update({ status: 'Completed' })
-          .eq('id', txId);
-        if (updateTxError) throw updateTxError;
-
-        const { data: wallet, error: walletError } = await supabase
-          .from('wallets')
-          .select('*')
-          .eq('id', tx.wallet_id)
-          .single();
-        if (walletError || !wallet) throw new Error('Wallet not found');
-
-        const { error: updateWalletError } = await supabase
-          .from('wallets')
-          .update({ deposit_balance: Number(wallet.deposit_balance) + Number(tx.amount) })
-          .eq('id', tx.wallet_id);
-        if (updateWalletError) throw updateWalletError;
-      }
+      if (error) throw error;
 
       alert(`Deposit request updated successfully!`);
       await fetchData();
