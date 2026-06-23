@@ -1845,6 +1845,46 @@ export default function AdminPanelPage() {
         if (updateWalletError) throw updateWalletError;
       }
 
+      // Sync matching deposit record status if reference_id exists
+      if (tx.reference_id) {
+        await supabase
+          .from('deposits')
+          .update({ status: approve ? 'Completed' : 'Failed' })
+          .eq('id', tx.reference_id);
+      }
+
+      // Send real-time notification to user
+      const { data: walletObj } = await supabase
+        .from('wallets')
+        .select('user_id')
+        .eq('id', tx.wallet_id)
+        .single();
+
+      if (walletObj) {
+        const actionText = approve ? 'Approved' : 'Rejected';
+        const notificationMsg = approve
+          ? `Your manual deposit of ₹${tx.amount} has been verified and approved.`
+          : `Your manual deposit of ₹${tx.amount} was rejected by the administrator.`;
+
+        await supabase.from('notifications').insert({
+          user_id: walletObj.user_id,
+          title: `Deposit ${actionText}`,
+          message: notificationMsg,
+          type: `Deposit ${actionText}`
+        });
+      }
+
+      // Insert audit log entry
+      if (user?.id) {
+        await supabase.from('audit_logs').insert({
+          action_by: user.id,
+          action: `${approve ? 'Approve' : 'Reject'} Deposit`,
+          target_type: 'Deposit',
+          target_id: txId,
+          details: `Processed deposit transaction of ₹${tx.amount}`
+        });
+      }
+
       alert(`Deposit request updated successfully!`);
       await fetchData();
     } catch (err: any) {
