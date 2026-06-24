@@ -62,8 +62,6 @@ interface Registration {
   check_in_status?: 'Checked In' | 'Pending' | 'DNQ';
   profiles?: {
     name: string;
-    email?: string;
-    phone_number?: string;
   };
 }
 
@@ -1242,17 +1240,51 @@ export default function AdminPanelPage() {
         const mappedRegs = regs.map((r: any) => ({
           ...r,
           profiles: {
-            name: profilesMap[r.user_id]?.name || 'Player',
-            email: profilesMap[r.user_id]?.email || ''
+            name: profilesMap[r.user_id]?.name || 'Player'
           }
         }));
         setRegsForSelectedTourney(mappedRegs);
         return;
       }
-      const { data } = await supabase
+      let data = null;
+      const { data: joinedData, error: joinError } = await supabase
         .from('registrations')
-        .select('*, profiles(name, email)')
+        .select('*, profiles(name)')
         .eq('tournament_id', selectedTourneyId);
+
+      if (!joinError && joinedData) {
+        data = joinedData;
+      } else {
+        // Fallback: fetch registrations and profiles separately
+        const { data: rawRegs, error: rawError } = await supabase
+          .from('registrations')
+          .select('*')
+          .eq('tournament_id', selectedTourneyId);
+
+        if (!rawError && rawRegs) {
+          if (rawRegs.length > 0) {
+            const userIds = rawRegs.map(r => r.user_id);
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('id, name')
+              .in('id', userIds);
+
+            const profMap: Record<string, any> = {};
+            if (profilesData) {
+              profilesData.forEach(p => {
+                profMap[p.id] = p;
+              });
+            }
+            data = rawRegs.map(r => ({
+              ...r,
+              profiles: profMap[r.user_id] || { name: 'Player' }
+            }));
+          } else {
+            data = [];
+          }
+        }
+      }
+
       if (data) {
         setRegsForSelectedTourney(data as any[]);
       }
@@ -2948,7 +2980,6 @@ export default function AdminPanelPage() {
                         <thead>
                           <tr className="border-b border-zinc-900 text-zinc-550 font-bold uppercase bg-zinc-950/40">
                             <th className="p-3">Player name</th>
-                            <th className="p-3">Game UID</th>
                             <th className="p-3">In-Game IGN</th>
                             <th className="p-3 text-center">Status</th>
                             <th className="p-3 text-center">Action</th>
@@ -2961,12 +2992,8 @@ export default function AdminPanelPage() {
                             return r.check_in_status === checkInFilter;
                           }).map((r) => (
                             <tr key={r.id} className="text-zinc-350 hover:bg-zinc-900/10">
-                              <td className="p-3">
-                                <div className="font-semibold text-zinc-200">{r.profiles?.name || 'Player'}</div>
-                                <div className="text-[10px] text-zinc-550 font-mono mt-0.5">{r.profiles?.email || 'N/A'}</div>
-                              </td>
-                              <td className="p-3 font-mono text-zinc-400">{r.game_id}</td>
-                              <td className="p-3 font-mono text-zinc-300">{r.ign}</td>
+                              <td className="p-3 font-semibold text-zinc-200">{r.profiles?.name || 'Player'}</td>
+                              <td className="p-3 font-mono">{r.ign}</td>
                               <td className="p-3 text-center">
                                 <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
                                   r.check_in_status === 'Checked In'

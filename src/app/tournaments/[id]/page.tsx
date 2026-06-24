@@ -247,10 +247,48 @@ export default function TournamentDetailPage() {
       }
 
       // 2. Fetch registrations for this tournament
-      const { data: regsData, error: regsError } = await supabase
+      let regsData = null;
+      let regsError = null;
+
+      const { data: joinedData, error: joinError } = await supabase
         .from('registrations')
         .select('*, profiles(name)')
         .eq('tournament_id', id);
+
+      if (!joinError && joinedData) {
+        regsData = joinedData;
+      } else {
+        // Fallback: fetch registrations and profiles separately
+        const { data: rawRegs, error: rawError } = await supabase
+          .from('registrations')
+          .select('*')
+          .eq('tournament_id', id);
+
+        if (!rawError && rawRegs) {
+          if (rawRegs.length > 0) {
+            const userIds = rawRegs.map(r => r.user_id);
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('id, name')
+              .in('id', userIds);
+
+            const profMap: Record<string, any> = {};
+            if (profilesData) {
+              profilesData.forEach(p => {
+                profMap[p.id] = p;
+              });
+            }
+            regsData = rawRegs.map(r => ({
+              ...r,
+              profiles: profMap[r.user_id] || { name: 'Player' }
+            }));
+          } else {
+            regsData = [];
+          }
+        } else {
+          regsError = rawError;
+        }
+      }
 
       if (!regsError && regsData) {
         setRegistrations(regsData as any[]);

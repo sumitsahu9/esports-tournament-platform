@@ -104,7 +104,7 @@ create table public.tournament_rooms (
 create table public.registrations (
     id uuid default gen_random_uuid() primary key,
     tournament_id uuid references public.tournaments(id) on delete cascade,
-    user_id uuid references auth.users(id) on delete cascade,
+    user_id uuid references public.profiles(id) on delete cascade,
     game_id text not null,
     ign text not null,
     check_in_status text default 'Pending' check (check_in_status in ('Checked In', 'Pending', 'DNQ')),
