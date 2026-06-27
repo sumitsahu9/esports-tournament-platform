@@ -2052,8 +2052,10 @@ export default function AdminPanelPage() {
         }
 
         // Calculate pool (50% entry fee pool)
-        const collection = Number(tourney.entry_fee) * tourney.filled_slots;
-        const prizePool = 0.50 * collection;
+        const entryFee = Number(tourney.entry_fee) || 0;
+        const prizePool = entryFee > 0 
+          ? (entryFee * tourney.filled_slots * 0.50) 
+          : (Number(tourney.prize_pool) || 0);
 
         const p1 = 0.50 * prizePool; // Rank 1 = 50%
         const p2 = 0.30 * prizePool; // Rank 2 = 30%
@@ -2796,12 +2798,25 @@ export default function AdminPanelPage() {
                         </div>
                       ) : (
                         <>
-                          <div className="p-3 bg-cyan-950/15 border border-cyan-500/20 rounded-xl text-xs text-zinc-400 leading-relaxed space-y-1">
-                            <strong>Auto-Prize Distribution (50/30/20):</strong>
-                            <div>• Rank 1 wins: 50% of Prize Pool</div>
-                            <div>• Rank 2 wins: 30% of Prize Pool</div>
-                            <div>• Rank 3 wins: 20% of Prize Pool</div>
-                          </div>
+                          {(() => {
+                            const tourney = tournaments.find(t => t.id === selectedTourneyId);
+                            if (!tourney) return null;
+                            const entryFee = Number(tourney.entry_fee) || 0;
+                            const filledSlots = tourney.filled_slots || 0;
+                            const prizePool = entryFee > 0 
+                              ? (entryFee * filledSlots * 0.50) 
+                              : (Number(tourney.prize_pool) || 0);
+
+                            return (
+                              <div className="p-3 bg-cyan-950/15 border border-cyan-500/20 rounded-xl text-xs text-zinc-400 leading-relaxed space-y-1">
+                                <strong className="text-zinc-200">Prize Details (Filled Slots: {filledSlots}):</strong>
+                                <div className="text-cyan-400 font-bold mb-1">Actual Prize Pool: ₹{prizePool.toFixed(2)}</div>
+                                <div>• Rank 1 placement wins: ₹{(prizePool * 0.50).toFixed(2)} (50%)</div>
+                                <div>• Rank 2 placement wins: ₹{(prizePool * 0.30).toFixed(2)} (30%)</div>
+                                <div>• Rank 3 placement wins: ₹{(prizePool * 0.20).toFixed(2)} (20%)</div>
+                              </div>
+                            );
+                          })()}
 
                           {/* Rank 1 Selection */}
                           <div className="space-y-1">

@@ -841,6 +841,8 @@ declare
   v_payout numeric;
   v_wallet_id uuid;
   v_winner_row uuid;
+  v_entry_fee numeric;
+  v_filled_slots integer;
 begin
   -- Validate operator role permissions
   select role into v_operator_role from public.profiles where id = auth.uid();
@@ -849,7 +851,8 @@ begin
   end if;
 
   -- Lock tournament row
-  select prize_pool, status into v_prize_pool, v_status 
+  select entry_fee, filled_slots, prize_pool, status 
+  into v_entry_fee, v_filled_slots, v_prize_pool, v_status 
   from public.tournaments 
   where id = p_tournament_id for update;
 
@@ -859,6 +862,11 @@ begin
 
   if v_status = 'Completed' then
     raise exception 'Tournament results have already been finalized and published';
+  end if;
+
+  -- Calculate dynamic prize pool based on actual filled slots (50% of the collection) for paid matches
+  if v_entry_fee > 0 then
+    v_prize_pool := round(v_entry_fee * v_filled_slots * 0.50, 2);
   end if;
 
   -- Process Rank 1
@@ -912,17 +920,20 @@ begin
     values (p_rank3_user_id, 'Prize Money Credited!', 'Congratulations! You placed Rank 3 and won ₹' || v_payout || ' winnings credit.', 'Prize Earned');
   end if;
 
-  -- Mark tournament as completed
-  update public.tournaments set status = 'Completed' where id = p_tournament_id;
+  -- Mark tournament as completed and update dynamic prize pool
+  update public.tournaments 
+  set status = 'Completed',
+      prize_pool = v_prize_pool
+  where id = p_tournament_id;
 
   -- Create audit log entry
   insert into public.audit_logs (action_by, action, target_type, target_id, details)
   values (
     auth.uid(),
-    'Publish Tournament Results',
+    'Publish Standings',
     'Tournament',
-    p_tournament_id::text,
-    'Finalized standings and distributed ₹' || v_prize_pool || ' total prize pool'
+    p_tournament_id,
+    'Finalized standings and distributed ₹' || v_prize_pool || ' total prize pool based on filled slots'
   );
 
   return json_build_object('success', true);
