@@ -231,20 +231,7 @@ export default function TournamentDetailPage() {
         setTournament(tourneyData as Tournament);
       }
 
-      // Check and auto-transition Pending check-ins to DNQ if check-in has expired
-      if (currentTourney) {
-        const startTime = new Date(currentTourney.start_time).getTime();
-        const now = Date.now();
-        const timeDiff = startTime - now;
-        const fiveMins = 5 * 60 * 1000;
-        if (timeDiff < fiveMins) {
-          await supabase
-            .from('registrations')
-            .update({ check_in_status: 'DNQ' })
-            .eq('tournament_id', id)
-            .eq('check_in_status', 'Pending');
-        }
-      }
+
 
       // 2. Fetch registrations for this tournament
       let regsData = null;

@@ -1203,35 +1203,7 @@ export default function AdminPanelPage() {
     async function fetchRegs() {
       if (!selectedTourneyId) return;
 
-      const tourney = tournaments.find((t: any) => t.id === selectedTourneyId);
-      if (tourney) {
-        const startTime = new Date(tourney.start_time).getTime();
-        const now = Date.now();
-        const timeDiff = startTime - now;
-        const fiveMins = 5 * 60 * 1000;
-        if (timeDiff < fiveMins) {
-          if (isMockEnabled) {
-            const allRegs = mockDb.getRegistrations();
-            let changed = false;
-            const updated = allRegs.map((r: any) => {
-              if (r.tournament_id === selectedTourneyId && (!r.check_in_status || r.check_in_status === 'Pending')) {
-                changed = true;
-                return { ...r, check_in_status: 'DNQ' };
-              }
-              return r;
-            });
-            if (changed) {
-              mockDb.saveRegistrations(updated);
-            }
-          } else {
-            await supabase
-              .from('registrations')
-              .update({ check_in_status: 'DNQ' })
-              .eq('tournament_id', selectedTourneyId)
-              .eq('check_in_status', 'Pending');
-          }
-        }
-      }
+
 
       if (isMockEnabled) {
         const allRegs = mockDb.getRegistrations();
