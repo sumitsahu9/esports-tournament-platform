@@ -153,25 +153,7 @@ export default function TournamentDetailPage() {
         }
         setTournament(found);
 
-        // Check and auto-transition Pending check-ins to DNQ if check-in has expired
-        const startTime = new Date(found.start_time).getTime();
-        const now = Date.now();
-        const timeDiff = startTime - now;
-        const fiveMins = 5 * 60 * 1000;
-        if (timeDiff < fiveMins) {
-          const allRegs = mockDb.getRegistrations();
-          let changed = false;
-          const updatedRegs = allRegs.map((r: any) => {
-            if (r.tournament_id === id && (!r.check_in_status || r.check_in_status === 'Pending')) {
-              changed = true;
-              return { ...r, check_in_status: 'DNQ' };
-            }
-            return r;
-          });
-          if (changed) {
-            mockDb.saveRegistrations(updatedRegs);
-          }
-        }
+
 
         // 2. Fetch registrations for this tournament
         const allRegs = mockDb.getRegistrations();
