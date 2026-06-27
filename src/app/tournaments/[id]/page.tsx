@@ -988,7 +988,7 @@ export default function TournamentDetailPage() {
                   <Key className="w-4 h-4 text-purple-400" />
                   Room Access Credentials
                 </h4>
-                {tournament.room_published && roomDetails && (userRegistration?.check_in_status === 'Checked In' || isMockEnabled) ? (
+                {tournament.room_published && roomDetails && (userRegistration?.check_in_status === 'Checked In' || userRegistration?.check_in_status === 'Pending' || isMockEnabled) ? (
                   <div className="space-y-2.5 pt-2">
                     <div className="flex justify-between items-center bg-zinc-900 p-2.5 rounded border border-zinc-800">
                       <span className="text-xs text-zinc-400">Room ID:</span>
