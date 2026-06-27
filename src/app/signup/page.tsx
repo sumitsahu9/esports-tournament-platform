@@ -16,6 +16,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isUnconfirmed, setIsUnconfirmed] = useState(false);
 
   // Form Fields
   const [name, setName] = useState('');
@@ -107,10 +108,15 @@ export default function SignupPage() {
           console.warn('Fallback update profile warning (handled via trigger):', profileError);
         }
 
+        const emailUnconfirmed = !data.session;
+        setIsUnconfirmed(emailUnconfirmed);
         setSuccess(true);
-        setTimeout(() => {
-          router.push('/dashboard');
-        }, 3000);
+        
+        if (!emailUnconfirmed) {
+          setTimeout(() => {
+            router.push('/dashboard');
+          }, 3000);
+        }
       }
     } catch (err: any) {
       console.error(err);
@@ -137,9 +143,26 @@ export default function SignupPage() {
               <CheckCircle className="w-16 h-16 text-emerald-500 animate-bounce" />
             </div>
             <h2 className="text-2xl font-black text-white">Registration Successful!</h2>
-            <p className="text-sm text-zinc-400">
-              Your account has been created. Redirecting to dashboard...
-            </p>
+            {isUnconfirmed ? (
+              <>
+                <p className="text-sm text-zinc-400">
+                  📧 <strong>Verification link sent!</strong> We've sent a confirmation email. Please verify your email before logging in.
+                </p>
+                <div className="pt-4">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-1.5 text-sm font-bold text-purple-400 hover:underline"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Go to Login
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-zinc-400">
+                Your account has been created. Redirecting to dashboard...
+              </p>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSignup} className="space-y-6">
