@@ -3006,32 +3006,15 @@ export default function AdminPanelPage() {
                                 </span>
                               </td>
                               <td className="p-3 text-center">
-                                {(!r.check_in_status || r.check_in_status === 'Pending') ? (
-                                  <div className="flex justify-center gap-1.5">
-                                    <button
-                                      onClick={() => handleProcessCheckIn(r.id, 'Checked In')}
-                                      className="px-1.5 py-0.5 bg-emerald-950/40 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-900/20 rounded text-[9px] font-bold transition-colors"
-                                      title="Mark Checked In"
-                                    >
-                                      Check In
-                                    </button>
-                                    <button
-                                      onClick={() => handleProcessCheckIn(r.id, 'DNQ')}
-                                      className="px-1.5 py-0.5 bg-red-950/40 text-red-400 border border-red-500/20 hover:bg-red-900/20 rounded text-[9px] font-bold transition-colors"
-                                      title="Mark DNQ"
-                                    >
-                                      DNQ
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => handleProcessCheckIn(r.id, 'Pending')}
-                                    className="px-2 py-0.5 bg-zinc-900 text-zinc-400 border border-zinc-800 hover:bg-zinc-800 rounded text-[9px] font-bold transition-colors"
-                                    title="Reset Check-in Status to Pending"
-                                  >
-                                    Reset
-                                  </button>
-                                )}
+                                <select
+                                  value={r.check_in_status || 'Pending'}
+                                  onChange={(e) => handleProcessCheckIn(r.id, e.target.value as 'Checked In' | 'Pending' | 'DNQ')}
+                                  className="bg-zinc-900 text-zinc-300 border border-zinc-800 rounded px-2.5 py-1 text-[10px] font-bold focus:outline-none focus:border-purple-505 cursor-pointer transition-colors"
+                                >
+                                  <option value="Pending" className="bg-zinc-950 text-yellow-500">Pending</option>
+                                  <option value="Checked In" className="bg-zinc-950 text-emerald-400">Checked In</option>
+                                  <option value="DNQ" className="bg-zinc-950 text-red-400">DNQ</option>
+                                </select>
                               </td>
                             </tr>
                           ))}
