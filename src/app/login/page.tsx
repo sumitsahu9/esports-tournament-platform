@@ -24,19 +24,21 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg(null);
 
+    const cleanEmail = email.trim();
+
     try {
-      if (email.toLowerCase() === 'sumit903970@gmail.com' && password !== '9039709836#') {
+      if (cleanEmail.toLowerCase() === 'sumit903970@gmail.com' && password !== '9039709836#') {
         throw new Error('Invalid email or password');
       }
 
       if (isMockEnabled) {
-        await loginMockUser(email);
+        await loginMockUser(cleanEmail);
         router.push('/dashboard');
         return;
       }
 
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: cleanEmail,
         password,
       });
 

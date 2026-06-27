@@ -55,10 +55,12 @@ export default function SignupPage() {
     setLoading(true);
     setErrorMsg(null);
 
+    const cleanEmail = email.trim();
+
     try {
       if (isMockEnabled) {
         await registerMockUser({
-          email,
+          email: cleanEmail,
           name,
           phone,
           bgmiCharId,
@@ -75,7 +77,7 @@ export default function SignupPage() {
 
       // 1. Sign up with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: cleanEmail,
         password,
         options: {
           data: {
