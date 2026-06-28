@@ -749,7 +749,11 @@ export default function TournamentDetailPage() {
             <div className="p-4 bg-zinc-950/80 rounded-xl border border-zinc-900 text-center space-y-1">
               <Trophy className="w-5 h-5 text-emerald-400 mx-auto" />
               <div className="text-[10px] text-zinc-500 uppercase font-black">Prize Pool</div>
-              <div className="text-base sm:text-lg font-black text-emerald-400">₹{tournament.prize_pool}</div>
+              <div className="text-base sm:text-lg font-black text-emerald-400">
+                ₹{tournament.entry_fee > 0 
+                  ? (Number(tournament.entry_fee) * tournament.total_slots * 0.50).toFixed(0) 
+                  : tournament.prize_pool}
+              </div>
             </div>
             <div className="p-4 bg-zinc-950/80 rounded-xl border border-zinc-900 text-center space-y-1">
               <Award className="w-5 h-5 text-purple-400 mx-auto" />

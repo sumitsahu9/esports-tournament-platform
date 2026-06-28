@@ -920,10 +920,9 @@ begin
     values (p_rank3_user_id, 'Prize Money Credited!', 'Congratulations! You placed Rank 3 and won ₹' || v_payout || ' winnings credit.', 'Prize Earned');
   end if;
 
-  -- Mark tournament as completed and update dynamic prize pool
+  -- Mark tournament as completed (Keep original prize_pool static in the database)
   update public.tournaments 
-  set status = 'Completed',
-      prize_pool = v_prize_pool
+  set status = 'Completed'
   where id = p_tournament_id;
 
   -- Create audit log entry

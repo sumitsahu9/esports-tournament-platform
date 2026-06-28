@@ -23,6 +23,7 @@ interface JoinedTournament {
   start_time: string;
   prize_pool: number;
   status: 'Upcoming' | 'Live' | 'Completed';
+  total_slots: number;
   registrations: {
     ign: string;
     game_id: string;
@@ -147,6 +148,7 @@ export default function DashboardPage() {
               start_time: tourney.start_time,
               prize_pool: Number(tourney.prize_pool),
               status: tourney.status,
+              total_slots: Number(tourney.total_slots || 0),
               registrations: {
                 ign: r.ign,
                 game_id: r.game_id,
@@ -232,7 +234,8 @@ export default function DashboardPage() {
             entry_fee,
             start_time,
             prize_pool,
-            status
+            status,
+            total_slots
           )
         `)
         .eq('user_id', user.id);
@@ -249,6 +252,7 @@ export default function DashboardPage() {
             start_time: r.tournaments.start_time,
             prize_pool: Number(r.tournaments.prize_pool),
             status: r.tournaments.status,
+            total_slots: Number(r.tournaments.total_slots || 0),
             registrations: {
               ign: r.ign,
               game_id: r.game_id,
@@ -1477,7 +1481,7 @@ export default function DashboardPage() {
 
                       <h3 className="text-lg font-bold text-zinc-100">{t.title}</h3>
                       <div className="text-xs text-zinc-400 mt-1 space-y-1">
-                        <div>Mode: <strong>{t.mode}</strong> | Prize Pool: <strong className="text-emerald-400">₹{t.prize_pool}</strong></div>
+                        <div>Mode: <strong>{t.mode}</strong> | Prize Pool: <strong className="text-emerald-400">₹{t.entry_fee > 0 ? (Number(t.entry_fee) * t.total_slots * 0.50).toFixed(0) : t.prize_pool}</strong></div>
                         <div className="pt-2 border-t border-zinc-950 mt-2 text-[11px]">
                           Registered IGN: <strong className="text-zinc-200">{t.registrations.ign}</strong> ({t.registrations.game_id})
                         </div>

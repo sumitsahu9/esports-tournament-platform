@@ -567,7 +567,9 @@ export default function LandingPage() {
                     <div className="grid grid-cols-2 gap-4 py-3.5 px-4 bg-zinc-950/80 rounded-xl border border-zinc-900 mb-6">
                       <div>
                         <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Prize Pool</div>
-                        <div className="text-lg font-black text-emerald-400">₹{t.prize_pool}</div>
+                        <div className="text-lg font-black text-emerald-400">
+                          ₹{t.entry_fee > 0 ? (Number(t.entry_fee) * t.total_slots * 0.50).toFixed(0) : t.prize_pool}
+                        </div>
                       </div>
                       <div>
                         <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Entry Fee</div>
