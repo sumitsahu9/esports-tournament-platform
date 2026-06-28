@@ -2037,6 +2037,12 @@ export default function AdminPanelPage() {
   const handlePublishResults = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTourneyId) return;
+
+    if (!winner1 && !winner2 && !winner3) {
+      alert('Please select at least one winner (Rank 1, Rank 2, or Rank 3) to publish results.');
+      return;
+    }
+
     setBtnLoading(true);
 
     try {
@@ -2822,14 +2828,13 @@ export default function AdminPanelPage() {
                           <div className="space-y-1">
                             <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider">🏆 Rank 1 Winner (50%)</label>
                             <select
-                              required
                               value={winner1}
                               onChange={(e) => setWinner1(e.target.value)}
                               className="w-full px-3 py-2 bg-zinc-950 border border-zinc-850 rounded-lg text-sm text-zinc-200"
                             >
-                              <option value="">-- Select Player --</option>
+                              <option value="">-- Select Player (Optional) --</option>
                               {regsForSelectedTourney
-                                .filter(r => r.check_in_status === 'Checked In')
+                                .filter(r => r.check_in_status === 'Checked In' && r.user_id !== winner2 && r.user_id !== winner3)
                                 .map(r => (
                                   <option key={r.user_id} value={r.user_id}>
                                     {r.ign} ({r.profiles?.name})
@@ -2848,7 +2853,7 @@ export default function AdminPanelPage() {
                             >
                               <option value="">-- Select Player (Optional) --</option>
                               {regsForSelectedTourney
-                                .filter(r => r.check_in_status === 'Checked In' && r.user_id !== winner1)
+                                .filter(r => r.check_in_status === 'Checked In' && r.user_id !== winner1 && r.user_id !== winner3)
                                 .map(r => (
                                   <option key={r.user_id} value={r.user_id}>
                                     {r.ign} ({r.profiles?.name})
