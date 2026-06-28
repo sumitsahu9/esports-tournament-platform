@@ -8,7 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, Users, Award, Play, Calendar, Zap, 
   ChevronDown, HelpCircle, Gamepad2, ArrowRight, Star,
-  ArrowUpRight, CheckCircle2, Image as ImageIcon, Flame, TrendingUp
+  ArrowUpRight, CheckCircle2, Image as ImageIcon, Flame, TrendingUp,
+  X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 interface Tournament {
@@ -149,7 +150,144 @@ interface LeaderboardPlayer {
   avatar: string;
 }
 
+interface TutorialSlide {
+  step: string;
+  heading: string;
+  hinglishScript: string;
+  hindiScript: string;
+  component: React.ReactNode;
+}
+
+const tutorialSlides: TutorialSlide[] = [
+  {
+    step: '1',
+    heading: '🎬 Introduction: Mash Arena Platform Kya Hai?',
+    hinglishScript: "Hey gamers! Mash Arena par aapka swagat hai. Aaj hum iss video guide me dekhenge ki platform par kya cheez kahan hai, aur aap matches join karke wallet balance kaise jeet sakte hain.",
+    hindiScript: "हे गेमर्स! मैश एरिना पर आपका स्वागत है। आज हम इस वीडियो गाइड में देखेंगे कि प्लेटफॉर्म पर क्या चीज़ कहां है, और आप मैचेस जॉइन करके वॉलेट बैलेंस कैसे जीत सकते हैं।",
+    component: (
+      <div className="flex flex-col items-center justify-center space-y-4">
+        <div className="w-20 h-20 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 animate-pulse">
+          <Gamepad2 className="w-10 h-10" />
+        </div>
+        <h4 className="text-xl font-extrabold text-white tracking-tight">Mash Arena Walkthrough</h4>
+        <p className="text-xs text-zinc-400 max-w-sm">Welcome to India's Premium Esports Tournament Platform</p>
+      </div>
+    )
+  },
+  {
+    step: '2',
+    heading: '👤 Profile Setup: Game IDs & Character Details',
+    hinglishScript: "Sabse pehle top menu me 'Dashboard' par click karein. Dashboard page ke bottom me aapko Profile settings milegi. Yahan apna BGMI aur Free Fire ka IGN (In-Game Name) aur Character ID set karein takki register karte waqt aapki details automatic verify ho sakein.",
+    hindiScript: "सबसे पहले टॉप मेनू में 'डैशबोर्ड' पर क्लिक करें। डैशबोर्ड पेज के बॉटम में आपको प्रोफाइल सेटिंग्स मिलेगी। यहां अपना BGMI और Free Fire का IGN (इन-गेम नाम) और कैरेक्टर आईडी सेट करें ताकि रजिस्टर करते समय आपकी डिटेल्स आटोमेटिक वेरीफाई हो सकें।",
+    component: (
+      <div className="w-full max-w-sm p-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-left space-y-3">
+        <h5 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Profile Configuration</h5>
+        <div className="space-y-2">
+          <div>
+            <label className="text-[10px] text-zinc-500 block mb-1">BGMI IN-GAME IGN</label>
+            <div className="px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-200 font-mono">djyfd</div>
+          </div>
+          <div>
+            <label className="text-[10px] text-zinc-500 block mb-1">BGMI CHARACTER ID</label>
+            <div className="px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-200 font-mono">5523991203</div>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    step: '3',
+    heading: '💳 Wallet System: Deposits & Withdrawal Management',
+    hinglishScript: "Dashboard ya Wallet balance card par click karke aap funds manage kar sakte hain. 'Add Cash' par click karke payments QR Code display hoga jise scan karke cash deposit request bhej sakte hain. Apni winnings ko instantly nikalne ke liye bas upi ID enter karke request withdraw kar sakte hain.",
+    hindiScript: "डैशबोर्ड या वॉलेट बैलेंस कार्ड पर क्लिक करके आप फंड्स मैनेज कर सकते हैं। 'ऐड कैश' पर क्लिक करके पेमेंट्स क्यूआर कोड डिस्प्ले होगा जिसे स्कैन करके कैश डिपाजिट रिक्वेस्ट भेज सकते हैं। अपनी विन्निंग्स को इंस्टेंटली निकालने के लिए बस यूपीआई आईडी एंटर करके रिक्वेस्ट विथड्रॉ कर सकते हैं।",
+    component: (
+      <div className="w-full max-w-xs p-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-left space-y-3">
+        <h5 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Mash Arena Wallet</h5>
+        <div className="p-3 bg-zinc-950 border border-zinc-850 rounded-xl space-y-2">
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-zinc-500">Deposit Balance:</span>
+            <span className="text-zinc-200 font-bold">₹100.00</span>
+          </div>
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-zinc-500">Winnings Balance:</span>
+            <span className="text-emerald-400 font-extrabold">₹350.00</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+          <div className="py-1.5 bg-purple-950/45 border border-purple-500/20 text-purple-400 rounded-lg text-center">Add Cash</div>
+          <div className="py-1.5 bg-emerald-950/45 border border-emerald-500/20 text-emerald-400 rounded-lg text-center">Withdraw</div>
+        </div>
+      </div>
+    )
+  },
+  {
+    step: '4',
+    heading: '🏆 Tournaments: Pay Entry Fee & Join Lobby',
+    hinglishScript: "Homepage par tournaments cards par entry fee, prize pool aur slots details dekh sakte hain. 'View Details' par click karke rules read karein aur 'Pay & Register' button se register karein. Agar aapke pass coupon code hai, toh extra discount ke liye add kar sakte hain.",
+    hindiScript: "होमपेज पर टूर्नामेंट्स कार्ड्स पर एंट्री फीस, प्राइज पूल और स्लॉट्स डिटेल्स देख सकते हैं। 'व्यू डिटेल्स' पर क्लिक करके रूल्स रीड करें और 'पे एंड रजिस्टर' बटन से रजिस्टर करें। अगर आपके पास कूपन कोड है, तो एक्स्ट्रा डिस्काउंट के लिए ऐड कर सकते हैं।",
+    component: (
+      <div className="w-full max-w-xs p-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-left space-y-3">
+        <h5 className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+          Active Lobby
+        </h5>
+        <div className="text-sm font-black text-zinc-200">Erangle Squad Clash</div>
+        <div className="grid grid-cols-2 gap-3 text-xs bg-zinc-950 p-2.5 rounded-xl border border-zinc-850">
+          <div>
+            <span className="text-zinc-500 block text-[9px] uppercase font-bold">Entry Fee</span>
+            <span className="text-zinc-200 font-black">₹10.00</span>
+          </div>
+          <div>
+            <span className="text-zinc-500 block text-[9px] uppercase font-bold">Slots</span>
+            <span className="text-zinc-200 font-black">1/100</span>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    step: '5',
+    heading: '🔑 Room Credentials: Get Room ID & Password',
+    hinglishScript: "Match ke start time se thik 15 minutes pehle, aapko dashboard par active match detail page par aana hoga. Yahan screen par Room ID aur Password live show ho jayega. Use copy karein aur game app me room join karein.",
+    hindiScript: "मैच के स्टार्ट टाइम से ठीक 15 मिनट पहले, आपको डैशबोर्ड पर एक्टिव मैच डिटेल पेज पर आना होगा। यहां स्क्रीन पर रूम आईडी और पासवर्ड लाइव शो हो जाएगा। उसे कॉपी करें और गेम ऐप में रूम ज्वाइन करें।",
+    component: (
+      <div className="w-full max-w-sm p-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-left space-y-3">
+        <h5 className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Match Credentials</h5>
+        <div className="p-3 bg-zinc-950 border border-zinc-850 rounded-xl space-y-2 font-mono text-xs">
+          <div className="flex justify-between">
+            <span className="text-zinc-500">ROOM ID:</span>
+            <span className="text-yellow-500 font-black">887201</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-500">PASSWORD:</span>
+            <span className="text-yellow-500 font-black">mash123</span>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    step: '6',
+    heading: '💰 Winning Payouts: Automatic 50/30/20 Distribution',
+    hinglishScript: "Match complete hone par admin results publish karega. Humare automatic prize distribution system ke anusaar, winners ki list final hote hi Rank 1 (50%), Rank 2 (30%), aur Rank 3 (20%) ka prize money direct unke wallet me credit ho jata hai jise instantly withdraw kar sakte hain.",
+    hindiScript: "मैच कम्पलीट होने पर एडमिन रिजल्ट्स पब्लिश करेगा। हमारे ऑटोमेटिक प्राइज डिस्ट्रीब्यूशन सिस्टम के अनुसार, विनर्स की लिस्ट फाइनल होते ही रैंक 1 (50%), रैंक 2 (30%), और रैंक 3 (20%) का प्राइज मनी डायरेक्ट उनके वॉलेट में क्रेडिट हो जाता है जिसे इंस्टेंटली विथड्रॉ कर सकते हैं।",
+    component: (
+      <div className="flex flex-col items-center justify-center space-y-3 text-center">
+        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <Trophy className="w-8 h-8" />
+        </div>
+        <div className="text-sm font-bold text-zinc-200">Congratulations!</div>
+        <div className="px-3 py-1 bg-emerald-950/50 border border-emerald-500/30 rounded-full text-emerald-400 text-xs font-mono font-black">
+          + ₹250.00 Credited
+        </div>
+      </div>
+    )
+  }
+];
+
 export default function LandingPage() {
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialIndex, setTutorialIndex] = useState(0);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -789,9 +927,22 @@ export default function LandingPage() {
           <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-2">
             How It Works
           </h2>
-          <p className="text-sm sm:text-base text-zinc-400 max-w-lg mx-auto mb-16">
+          <p className="text-sm sm:text-base text-zinc-400 max-w-lg mx-auto mb-6">
             Get started in 5 simple steps. Zero complexities.
           </p>
+
+          <div className="flex justify-center mb-16">
+            <button
+              onClick={() => {
+                setTutorialIndex(0);
+                setShowTutorial(true);
+              }}
+              className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:scale-105"
+            >
+              <Play className="w-4 h-4 fill-white" />
+              Watch Hinglish Video Tutorial (वीडियो गाइड देखें)
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8 relative">
             {[
@@ -811,6 +962,107 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
+
+        {/* INTERACTIVE VIDEO TUTORIAL MODAL */}
+        {showTutorial && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm">
+            <div className="w-full max-w-4xl bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[550px]">
+              {/* Left Column: Simulated Video Player Screen */}
+              <div className="w-full md:w-3/5 bg-zinc-950 flex flex-col justify-between relative p-4 border-b md:border-b-0 md:border-r border-zinc-850">
+                {/* Top info */}
+                <div className="flex justify-between items-center text-[10px] text-zinc-400 z-10">
+                  <span className="font-bold text-zinc-300">Mash Arena Walkthrough Video</span>
+                  <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-extrabold text-[9px] uppercase tracking-wider">Hinglish / Hindi</span>
+                </div>
+
+                {/* Dynamic screen display based on slide index */}
+                <div className="flex-grow flex flex-col items-center justify-center p-6 text-center text-zinc-300">
+                  {tutorialSlides[tutorialIndex].component}
+                </div>
+
+                {/* Bottom video controls */}
+                <div className="space-y-3 z-10">
+                  {/* Timeline bar */}
+                  <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden cursor-pointer relative">
+                    <div 
+                      className="h-full bg-purple-500 transition-all duration-300"
+                      style={{ width: `${((tutorialIndex + 1) / tutorialSlides.length) * 100}%` }}
+                    />
+                  </div>
+                  {/* Control buttons */}
+                  <div className="flex justify-between items-center text-zinc-400 text-xs">
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => setTutorialIndex(prev => Math.max(0, prev - 1))}
+                        disabled={tutorialIndex === 0}
+                        className="hover:text-white disabled:opacity-30 transition-opacity"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button 
+                        onClick={() => setTutorialIndex(prev => Math.min(tutorialSlides.length - 1, prev + 1))}
+                        disabled={tutorialIndex === tutorialSlides.length - 1}
+                        className="hover:text-white disabled:opacity-30 transition-opacity"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                      <span>{tutorialIndex + 1} / {tutorialSlides.length}</span>
+                    </div>
+                    <span className="font-semibold text-zinc-500">Mash Arena Media Player</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Hinglish Script & Explanation */}
+              <div className="w-full md:w-2/5 bg-zinc-900 p-6 flex flex-col justify-between overflow-y-auto">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
+                      Audio Explanation (ऑडियो गाइड)
+                    </h3>
+                    <button 
+                      onClick={() => setShowTutorial(false)}
+                      className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl">
+                    <p className="text-xs text-purple-300 font-bold leading-normal">
+                      {tutorialSlides[tutorialIndex].heading}
+                    </p>
+                  </div>
+
+                  <div className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-medium space-y-3 pt-2">
+                    <p className="italic text-zinc-400 border-l-2 border-zinc-700 pl-3 mb-2 text-[12px]">
+                      {tutorialSlides[tutorialIndex].hinglishScript}
+                    </p>
+                    <p className="text-zinc-200">
+                      {tutorialSlides[tutorialIndex].hindiScript}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-zinc-850 flex gap-2 mt-6">
+                  <button
+                    onClick={() => {
+                      if (tutorialIndex === tutorialSlides.length - 1) {
+                        setShowTutorial(false);
+                      } else {
+                        setTutorialIndex(prev => prev + 1);
+                      }
+                    }}
+                    className="flex-grow py-2.5 bg-purple-600 hover:bg-purple-500 text-zinc-100 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    {tutorialIndex === tutorialSlides.length - 1 ? 'Close (बंद करें)' : 'Next Step (आगे बढ़ें)'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* WINNER SHOWCASE CAROUSEL */}
