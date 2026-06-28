@@ -945,22 +945,9 @@ export default function LandingPage() {
           <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-2">
             How It Works
           </h2>
-          <p className="text-sm sm:text-base text-zinc-400 max-w-lg mx-auto mb-6">
+          <p className="text-sm sm:text-base text-zinc-400 max-w-lg mx-auto mb-16">
             Get started in 5 simple steps. Zero complexities.
           </p>
-
-          <div className="flex justify-center mb-16">
-            <button
-              onClick={() => {
-                setTutorialIndex(0);
-                setShowTutorial(true);
-              }}
-              className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2 shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:scale-105"
-            >
-              <Play className="w-4 h-4 fill-white" />
-              Watch Hinglish Video Tutorial (वीडियो गाइड देखें)
-            </button>
-          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8 relative">
             {[
