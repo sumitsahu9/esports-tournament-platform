@@ -288,6 +288,7 @@ const tutorialSlides: TutorialSlide[] = [
 export default function LandingPage() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialIndex, setTutorialIndex] = useState(0);
+  const [tutorialVideoUrl, setTutorialVideoUrl] = useState('https://www.youtube.com/embed/dQw4w9WgXcQ');
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -429,6 +430,9 @@ export default function LandingPage() {
 
         const wdList = mockDb.getWithdrawals().filter((w: any) => w.status === 'Approved');
         setWithdrawals(wdList);
+
+        const video = mockDb.getTutorialVideoUrl();
+        setTutorialVideoUrl(video);
       } else {
         // 1. Fetch tournaments
         const { data: tData, error: tError } = await supabase
@@ -454,6 +458,20 @@ export default function LandingPage() {
           .limit(10);
         if (wdData) {
           setWithdrawals(wdData);
+        }
+
+        // 3. Fetch Tutorial Video Setting from Supabase
+        try {
+          const { data: videoData } = await supabase
+            .from('admin_settings')
+            .select('value')
+            .eq('key', 'tutorial_video_url')
+            .maybeSingle();
+          if (videoData) {
+            setTutorialVideoUrl(videoData.value);
+          }
+        } catch (err) {
+          console.error('Failed to fetch settings video URL:', err);
         }
       }
 
@@ -966,60 +984,40 @@ export default function LandingPage() {
         {/* INTERACTIVE VIDEO TUTORIAL MODAL */}
         {showTutorial && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm">
-            <div className="w-full max-w-4xl bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[550px]">
-              {/* Left Column: Simulated Video Player Screen */}
-              <div className="w-full md:w-3/5 bg-zinc-950 flex flex-col justify-between relative p-4 border-b md:border-b-0 md:border-r border-zinc-850">
+            <div className="w-full max-w-5xl bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[600px]">
+              {/* Left Column: Playable Video Player */}
+              <div className="w-full md:w-3/5 bg-black flex flex-col justify-between relative p-4 border-b md:border-b-0 md:border-r border-zinc-850">
                 {/* Top info */}
-                <div className="flex justify-between items-center text-[10px] text-zinc-400 z-10">
-                  <span className="font-bold text-zinc-300">Mash Arena Walkthrough Video</span>
-                  <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-extrabold text-[9px] uppercase tracking-wider">Hinglish / Hindi</span>
+                <div className="flex justify-between items-center text-[10px] text-zinc-400 z-10 mb-2">
+                  <span className="font-bold text-zinc-300">Mash Arena Playable Tutorial Video</span>
+                  <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-extrabold text-[9px] uppercase tracking-wider animate-pulse">Playable Video</span>
                 </div>
 
-                {/* Dynamic screen display based on slide index */}
-                <div className="flex-grow flex flex-col items-center justify-center p-6 text-center text-zinc-300">
-                  {tutorialSlides[tutorialIndex].component}
+                {/* The video iframe */}
+                <div className="flex-grow w-full relative bg-zinc-950 rounded-xl overflow-hidden min-h-[220px] md:min-h-0">
+                  <iframe
+                    src={tutorialVideoUrl}
+                    title="Mash Arena Tutorial Walkthrough Video"
+                    className="absolute inset-0 w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
                 </div>
 
-                {/* Bottom video controls */}
-                <div className="space-y-3 z-10">
-                  {/* Timeline bar */}
-                  <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden cursor-pointer relative">
-                    <div 
-                      className="h-full bg-purple-500 transition-all duration-300"
-                      style={{ width: `${((tutorialIndex + 1) / tutorialSlides.length) * 100}%` }}
-                    />
-                  </div>
-                  {/* Control buttons */}
-                  <div className="flex justify-between items-center text-zinc-400 text-xs">
-                    <div className="flex items-center gap-4">
-                      <button 
-                        onClick={() => setTutorialIndex(prev => Math.max(0, prev - 1))}
-                        disabled={tutorialIndex === 0}
-                        className="hover:text-white disabled:opacity-30 transition-opacity"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={() => setTutorialIndex(prev => Math.min(tutorialSlides.length - 1, prev + 1))}
-                        disabled={tutorialIndex === tutorialSlides.length - 1}
-                        className="hover:text-white disabled:opacity-30 transition-opacity"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                      <span>{tutorialIndex + 1} / {tutorialSlides.length}</span>
-                    </div>
-                    <span className="font-semibold text-zinc-500">Mash Arena Media Player</span>
-                  </div>
+                {/* Player Branding */}
+                <div className="flex justify-between items-center text-zinc-500 text-[10px] pt-3 font-semibold">
+                  <span>Configured by Admin settings</span>
+                  <span>Mash Arena Playback System</span>
                 </div>
               </div>
 
-              {/* Right Column: Hinglish Script & Explanation */}
+              {/* Right Column: Hinglish Step-by-Step Clicks Guide */}
               <div className="w-full md:w-2/5 bg-zinc-900 p-6 flex flex-col justify-between overflow-y-auto">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
-                      Audio Explanation (ऑडियो गाइड)
+                      <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-ping" />
+                      Hinglish Step-by-Step Clicks Guide
                     </h3>
                     <button 
                       onClick={() => setShowTutorial(false)}
@@ -1029,26 +1027,111 @@ export default function LandingPage() {
                     </button>
                   </div>
 
-                  <div className="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl">
-                    <p className="text-xs text-purple-300 font-bold leading-normal">
-                      {tutorialSlides[tutorialIndex].heading}
-                    </p>
+                  {/* Interactive Steps Selection Tabs */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {['Profile & Wallet', 'Join Tournaments', 'Room Code Lobby', 'Winner Winnings'].map((stepTitle, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setTutorialIndex(idx)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition-all ${
+                          tutorialIndex === idx
+                            ? 'bg-purple-600 border-purple-500 text-white'
+                            : 'bg-zinc-950 border-zinc-850 text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        {stepTitle}
+                      </button>
+                    ))}
                   </div>
 
-                  <div className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-medium space-y-3 pt-2">
-                    <p className="italic text-zinc-400 border-l-2 border-zinc-700 pl-3 mb-2 text-[12px]">
-                      {tutorialSlides[tutorialIndex].hinglishScript}
-                    </p>
-                    <p className="text-zinc-200">
-                      {tutorialSlides[tutorialIndex].hindiScript}
-                    </p>
+                  {/* Steps Content explaining exactly where to click to do what */}
+                  <div className="space-y-3">
+                    {tutorialIndex === 0 && (
+                      <div className="space-y-3 text-xs leading-relaxed text-zinc-300">
+                        <div className="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl font-bold text-purple-300">
+                          👤 Step 1: Profile aur Wallet Setup
+                        </div>
+                        <p>
+                          <strong>Kahan click karein:</strong>
+                          <br />
+                          1. Screen ke top right corner me <strong>MASH ARENA</strong> profile dropdown ya <strong>Dashboard</strong> button par click karein.
+                          <br />
+                          2. Page ke bottom me scroll karke <strong>Profile configuration</strong> me jaa kar apna BGMI / Free Fire Character ID aur IGN save karein.
+                          <br />
+                          3. Dashboard me wallet card par <strong>Add Cash</strong> par click karein, open QR scan karein, pay karke UTR ID submit karein.
+                        </p>
+                        <p className="text-[11px] text-zinc-500 italic">
+                          Hinglish Script: "Top bar me Dashboard click karke profile details configure karein, fir Wallet balance card se deposit details save karein."
+                        </p>
+                      </div>
+                    )}
+
+                    {tutorialIndex === 1 && (
+                      <div className="space-y-3 text-xs leading-relaxed text-zinc-300">
+                        <div className="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl font-bold text-purple-300">
+                          🏆 Step 2: Tournaments Lobbies me register hona
+                        </div>
+                        <p>
+                          <strong>Kahan click karein:</strong>
+                          <br />
+                          1. Logo ya <strong>Home</strong> link par click karke homepage par jayein.
+                          <br />
+                          2. Apna pasandida match search karein aur card ke bottom right corner me <strong>View Details</strong> button click karein.
+                          <br />
+                          3. Details panel me <strong>Pay & Register</strong> button click karein (agar coupon code hai to insert karke click apply karein).
+                        </p>
+                        <p className="text-[11px] text-zinc-500 italic">
+                          Hinglish Script: "Match card par View Details aur fir register confirm karne ke liye Pay & Register button click karein."
+                        </p>
+                      </div>
+                    )}
+
+                    {tutorialIndex === 2 && (
+                      <div className="space-y-3 text-xs leading-relaxed text-zinc-300">
+                        <div className="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl font-bold text-purple-300">
+                          🔑 Step 3: Room ID aur Password live receive karna
+                        </div>
+                        <p>
+                          <strong>Kahan click karein:</strong>
+                          <br />
+                          1. Match day start hone se 15 minutes pehle top menu me <strong>Dashboard</strong> link click karein.
+                          <br />
+                          2. Active Lobbies section me apne match card ke green button <strong>Enter Lobby Page</strong> par click karein.
+                          <br />
+                          3. Room Card me show hone wale <strong>Room ID aur Password</strong> credentials ko copy karke game app me join room click karein.
+                        </p>
+                        <p className="text-[11px] text-zinc-500 italic">
+                          Hinglish Script: "Match lobby page me yellow box me Room credentials show ho jayenge, copy karke game me enter karein."
+                        </p>
+                      </div>
+                    )}
+
+                    {tutorialIndex === 3 && (
+                      <div className="space-y-3 text-xs leading-relaxed text-zinc-300">
+                        <div className="p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl font-bold text-purple-300">
+                          💰 Step 4: Standings, Payouts aur Withdraw karna
+                        </div>
+                        <p>
+                          <strong>Kahan click karein:</strong>
+                          <br />
+                          1. Game final hone ke baad admin direct winnings distribute kar dega (Rank 1, 2, or 3).
+                          <br />
+                          2. Apne winnings balance check karne ke liye top right corner me <strong>Wallet</strong> balance par click karein.
+                          <br />
+                          3. Winnings panel me <strong>Withdraw</strong> button click karein, amount aur upi ID enter karke request submit click karein!
+                        </p>
+                        <p className="text-[11px] text-zinc-500 italic">
+                          Hinglish Script: "Admin results publish karte hi payout seedhe wallet winnings me aayega. Wallet section me UPI ID aur Amount enter karke request submit karein."
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="pt-4 border-t border-zinc-850 flex gap-2 mt-6">
                   <button
                     onClick={() => {
-                      if (tutorialIndex === tutorialSlides.length - 1) {
+                      if (tutorialIndex === 3) {
                         setShowTutorial(false);
                       } else {
                         setTutorialIndex(prev => prev + 1);
@@ -1056,7 +1139,7 @@ export default function LandingPage() {
                     }}
                     className="flex-grow py-2.5 bg-purple-600 hover:bg-purple-500 text-zinc-100 rounded-xl text-xs font-bold transition-colors"
                   >
-                    {tutorialIndex === tutorialSlides.length - 1 ? 'Close (बंद करें)' : 'Next Step (आगे बढ़ें)'}
+                    {tutorialIndex === 3 ? 'Close Guide (गाइड बंद करें)' : 'Next Step (अगला स्टेप)'}
                   </button>
                 </div>
               </div>
