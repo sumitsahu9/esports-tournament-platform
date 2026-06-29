@@ -1816,11 +1816,11 @@ export default function AdminPanelPage() {
         if (prevStatus === 'Pending') {
           if (approve) {
             tx.status = 'Completed';
-            // Balance was already added instantly, do nothing
+            // Credit wallet balance now that it is approved
+            wallet.deposit_balance = Number(wallet.deposit_balance) + Number(tx.amount);
           } else {
             tx.status = 'Failed';
-            // Deduct balance because it was rejected
-            wallet.deposit_balance = Number(wallet.deposit_balance) - Number(tx.amount);
+            // Do nothing to the balance since it was never credited
           }
         } else if (prevStatus === 'Completed') {
           if (!approve) {
@@ -1861,15 +1861,8 @@ export default function AdminPanelPage() {
             .update({ status: 'Completed' })
             .eq('id', txId);
           if (updateTxError) throw updateTxError;
-          // Balance was already added instantly, do nothing
-        } else {
-          const { error: updateTxError } = await supabase
-            .from('transactions')
-            .update({ status: 'Failed' })
-            .eq('id', txId);
-          if (updateTxError) throw updateTxError;
 
-          // Fetch wallet and deduct balance
+          // Fetch wallet and credit balance now that it is approved
           const { data: wallet, error: walletError } = await supabase
             .from('wallets')
             .select('*')
@@ -1879,9 +1872,16 @@ export default function AdminPanelPage() {
 
           const { error: updateWalletError } = await supabase
             .from('wallets')
-            .update({ deposit_balance: Number(wallet.deposit_balance) - Number(tx.amount) })
+            .update({ deposit_balance: Number(wallet.deposit_balance) + Number(tx.amount) })
             .eq('id', tx.wallet_id);
           if (updateWalletError) throw updateWalletError;
+        } else {
+          const { error: updateTxError } = await supabase
+            .from('transactions')
+            .update({ status: 'Failed' })
+            .eq('id', txId);
+          if (updateTxError) throw updateTxError;
+          // Do nothing to the balance since it was never credited
         }
       } else if (prevStatus === 'Completed' && !approve) {
         // Change from Completed to Failed (Deduct balance)

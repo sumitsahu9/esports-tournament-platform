@@ -1022,11 +1022,7 @@ export default function DashboardPage() {
           winning_balance: 0,
           created_at: new Date().toISOString()
         };
-        // Add balance instantly!
-        userWallet.deposit_balance = Number(userWallet.deposit_balance) + amount;
-        walletsMap[user.id] = userWallet;
-        mockDb.saveWallets(walletsMap);
-
+        // Do not add balance instantly! It will be added once approved.
         const allTxs = mockDb.getTransactions();
         allTxs.push({
           id: `tx-${Date.now()}`,
@@ -1039,7 +1035,7 @@ export default function DashboardPage() {
         });
         mockDb.saveTransactions(allTxs);
 
-        alert(`Payment received! ₹${amount} has been instantly added to your wallet. Request is pending admin verification.`);
+        alert(`Payment received! Your deposit request of ₹${amount} is pending admin verification and approval.`);
         setDepositAmount('');
         setUpiReferenceId('');
         setDepositStep(1);
@@ -1059,7 +1055,7 @@ export default function DashboardPage() {
 
       if (error) throw error;
 
-      alert(`Payment received! ₹${amount} has been instantly added to your wallet. Request is pending admin verification.`);
+      alert(`Payment received! Your deposit request of ₹${amount} is pending admin verification and approval.`);
       setDepositAmount('');
       setUpiReferenceId('');
       setDepositStep(1);

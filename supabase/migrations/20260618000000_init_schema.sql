@@ -1269,10 +1269,7 @@ begin
   )
   returning id into v_deposit_id;
 
-  -- 3. Credit wallet balance instantly (manual fallback credit behavior)
-  update public.wallets set deposit_balance = deposit_balance + p_amount where id = v_wallet_id;
-
-  -- 4. Create pending transaction log
+  -- 3. Create pending transaction log (Wallet balance is NOT updated here)
   insert into public.transactions (wallet_id, type, amount, status, reference_id, description)
   values (
     v_wallet_id,
