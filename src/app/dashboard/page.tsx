@@ -88,6 +88,7 @@ export default function DashboardPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [depositStep, setDepositStep] = useState<1 | 2>(1);
+  const [depositMethod, setDepositMethod] = useState<'gateway' | 'manual'>('gateway');
   const [upiReferenceId, setUpiReferenceId] = useState('');
   const [paymentQr, setPaymentQr] = useState('/payment_qr.jpg');
 
@@ -394,6 +395,51 @@ export default function DashboardPage() {
       fetchDashboardData();
     }
   }, [user, wallet?.id]);
+
+  // Verify Cashfree redirect callback on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const cfOrderId = urlParams.get('cf_order_id');
+    
+    if (cfOrderId && user) {
+      const verifyPayment = async () => {
+        try {
+          setDataLoading(true);
+          const sessionToken = (await supabase.auth.getSession()).data.session?.access_token;
+          const res = await fetch('/api/cashfree/verify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionToken}`
+            },
+            body: JSON.stringify({
+              order_id: cfOrderId,
+              mock: cfOrderId.includes('cf_mock')
+            })
+          });
+          
+          const verifyData = await res.json();
+          if (res.ok && verifyData.success) {
+            alert('Winnings/Deposit balance credited successfully!');
+          } else {
+            alert(verifyData.message || 'Payment verification failed');
+          }
+          // Clear query params
+          router.replace('/dashboard');
+          await refreshWallet();
+          await fetchDashboardData();
+        } catch (err: any) {
+          console.error(err);
+          alert(err.message || 'Error verifying payment status');
+          router.replace('/dashboard');
+        } finally {
+          setDataLoading(false);
+        }
+      };
+      
+      verifyPayment();
+    }
+  }, [user]);
 
   // Populate profile edit form
   useEffect(() => {
@@ -974,18 +1020,92 @@ export default function DashboardPage() {
     }
   };
 
-  const loadRazorpayScript = () => {
+  const loadCashfreeScript = () => {
     return new Promise((resolve) => {
-      if ((window as any).Razorpay) {
+      if ((window as any).Cashfree) {
         resolve(true);
         return;
       }
       const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
       script.onload = () => resolve(true);
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
     });
+  };
+
+  const handleGatewayDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = Number(depositAmount);
+    if (!amount || amount <= 0) {
+      setFormError('Please enter a valid deposit amount');
+      return;
+    }
+
+    setActionLoading(true);
+    setFormError(null);
+
+    try {
+      const res = await fetch('/api/cashfree/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          customerId: user?.id || 'cust_anon',
+          customerEmail: user?.email || 'customer@example.com',
+          customerPhone: (profile as any)?.phone || '9999999999',
+          returnUrl: window.location.href.split('?')[0] + '?cf_order_id={order_id}'
+        })
+      });
+
+      const orderData = await res.json();
+      if (!res.ok) throw new Error(orderData.error || 'Failed to initiate gateway payment');
+
+      if (orderData.mock) {
+        // Simulated Mock Payment Verification
+        const sessionToken = (await supabase.auth.getSession()).data.session?.access_token;
+        const verifyRes = await fetch('/api/cashfree/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({
+            order_id: orderData.cf_order_id,
+            amount: orderData.order_amount,
+            mock: true
+          })
+        });
+
+        const verifyData = await verifyRes.json();
+        if (!verifyRes.ok) throw new Error(verifyData.error || 'Payment verification failed');
+
+        alert(`Mock payment successful! ₹${amount} has been instantly added to your wallet.`);
+        setDepositAmount('');
+        await refreshWallet();
+        await fetchDashboardData();
+        return;
+      }
+
+      // Real Cashfree integration
+      const loaded = await loadCashfreeScript();
+      if (!loaded) throw new Error('Failed to load Cashfree Payment SDK');
+
+      const cashfreeEnv = process.env.NEXT_PUBLIC_CASHFREE_ENV === 'production' ? 'production' : 'sandbox';
+      const cashfree = (window as any).Cashfree({
+        mode: cashfreeEnv
+      });
+
+      await cashfree.checkout({
+        paymentSessionId: orderData.payment_session_id,
+        redirectTarget: "_self"
+      });
+    } catch (err: any) {
+      console.error(err);
+      setFormError(err.message || 'Payment initiation failed');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleDeposit = async (e: React.FormEvent) => {
@@ -1520,84 +1640,142 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Deposit Form */}
                 <div className="p-5 glass-panel border border-zinc-800/80 rounded-2xl space-y-4">
-                  <div className="flex items-center gap-2 text-purple-400">
-                    <Plus className="w-5 h-5" />
-                    <h3 className="font-bold text-zinc-200">Deposit Funds</h3>
+                  <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+                    <div className="flex items-center gap-2 text-purple-400">
+                      <Plus className="w-5 h-5" />
+                      <h3 className="font-bold text-zinc-200">Deposit Funds</h3>
+                    </div>
+                    {/* Tabs */}
+                    <div className="flex gap-1.5 p-0.5 bg-zinc-950 border border-zinc-850 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDepositMethod('gateway');
+                          setFormError(null);
+                        }}
+                        className={`px-2.5 py-1 text-[10px] font-black rounded-md transition-all ${
+                          depositMethod === 'gateway'
+                            ? 'bg-purple-600 text-white'
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        Gateway
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDepositMethod('manual');
+                          setFormError(null);
+                        }}
+                        className={`px-2.5 py-1 text-[10px] font-black rounded-md transition-all ${
+                          depositMethod === 'manual'
+                            ? 'bg-purple-600 text-white'
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        Manual QR
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-xs text-zinc-400">
-                    {depositStep === 1 
-                      ? "Enter the amount of funds you wish to deposit to your wallet." 
-                      : "Scan the QR code below using any UPI app (GPay, PhonePe, Paytm, etc.) to pay, then submit the 12-digit UTR / UPI Reference Number."}
-                  </p>
 
-                  <form onSubmit={handleDeposit} className="space-y-3">
-                    {depositStep === 1 ? (
-                      <>
-                        <input
-                          type="number"
-                          required
-                          min="1"
-                          value={depositAmount}
-                          onChange={(e) => setDepositAmount(e.target.value)}
-                          placeholder="Amount (e.g. ₹50)"
-                          className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
-                        />
-                        <button
-                          type="submit"
-                          disabled={actionLoading}
-                          className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          Proceed to Payment
-                        </button>
-                      </>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="text-center py-2 bg-zinc-900/60 rounded-xl border border-zinc-800/50">
-                          <span className="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">Amount to Pay</span>
-                          <span className="text-xl font-black text-white">₹{Number(depositAmount).toFixed(2)}</span>
-                        </div>
+                  {depositMethod === 'gateway' ? (
+                    <form onSubmit={handleGatewayDeposit} className="space-y-3 pt-2">
+                      <p className="text-xs text-zinc-400 leading-relaxed">
+                        Instantly add funds to your wallet using Cashfree gateway (supports UPI, Cards, Netbanking, etc.). Wallet balance will be credited automatically.
+                      </p>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="Amount (e.g. ₹50)"
+                        className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                      />
+                      <button
+                        type="submit"
+                        disabled={actionLoading}
+                        className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pay Instantly'}
+                      </button>
+                    </form>
+                  ) : (
+                    <>
+                      <p className="text-xs text-zinc-400">
+                        {depositStep === 1 
+                          ? "Enter the amount of funds you wish to deposit to your wallet." 
+                          : "Scan the QR code below using any UPI app (GPay, PhonePe, Paytm, etc.) to pay, then submit the 12-digit UTR / UPI Reference Number."}
+                      </p>
 
-                        {/* Beautiful Glowing QR Frame */}
-                        <div className="relative mx-auto w-48 h-48 bg-zinc-950 rounded-2xl border border-purple-500/30 p-2 overflow-hidden flex items-center justify-center shadow-lg shadow-purple-950/20 group">
-                          {/* Pulsing Cyber Neon Background Glows */}
-                          <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/10 to-indigo-600/10 group-hover:opacity-100 transition-opacity duration-500" />
-                          <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-purple-500 rounded-tl" />
-                          <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-purple-500 rounded-tr" />
-                          <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-purple-500 rounded-bl" />
-                          <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-purple-500 rounded-br" />
-                          
-                          {/* Scan Line Animation Effect */}
-                          <div className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-purple-500 to-transparent shadow-[0_0_8px_rgba(168,85,247,0.8)] animate-bounce top-1/2" />
-                          
-                          <img
-                            src={paymentQr}
-                            alt="Payment QR Code"
-                            className="w-full h-full object-contain rounded-lg relative z-10"
-                          />
-                        </div>
+                      <form onSubmit={handleDeposit} className="space-y-3">
+                        {depositStep === 1 ? (
+                          <>
+                            <input
+                              type="number"
+                              required
+                              min="1"
+                              value={depositAmount}
+                              onChange={(e) => setDepositAmount(e.target.value)}
+                              placeholder="Amount (e.g. ₹50)"
+                              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                            />
+                            <button
+                              type="submit"
+                              disabled={actionLoading}
+                              className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+                            >
+                              Proceed to Payment
+                            </button>
+                          </>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="text-center py-2 bg-zinc-900/60 rounded-xl border border-zinc-800/50">
+                              <span className="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">Amount to Pay</span>
+                              <span className="text-xl font-black text-white">₹{Number(depositAmount).toFixed(2)}</span>
+                            </div>
 
-                        <div className="space-y-2">
-                          <label className="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">UTR number/UPI Ref No/Transaction ID (12 digits)</label>
-                          <input
-                            type="text"
-                            required
-                            pattern="\d{12}"
-                            maxLength={12}
-                            value={upiReferenceId}
-                            onChange={(e) => setUpiReferenceId(e.target.value.replace(/\D/g, ''))}
-                            placeholder="Enter 12-digit UTR/UPI Ref/Txn ID"
-                            className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors text-center font-mono tracking-widest"
-                          />
-                        </div>
+                            {/* Beautiful Glowing QR Frame */}
+                            <div className="relative mx-auto w-48 h-48 bg-zinc-950 rounded-2xl border border-purple-500/30 p-2 overflow-hidden flex items-center justify-center shadow-lg shadow-purple-950/20 group">
+                              {/* Pulsing Cyber Neon Background Glows */}
+                              <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/10 to-indigo-600/10 group-hover:opacity-100 transition-opacity duration-500" />
+                              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-purple-500 rounded-tl" />
+                              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-purple-500 rounded-tr" />
+                              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-purple-500 rounded-bl" />
+                              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-purple-500 rounded-br" />
+                              
+                              {/* Scan Line Animation Effect */}
+                              <div className="absolute left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-purple-500 to-transparent shadow-[0_0_8px_rgba(168,85,247,0.8)] animate-bounce top-1/2" />
+                              
+                              <img
+                                src={paymentQr}
+                                alt="Payment QR Code"
+                                className="w-full h-full object-contain rounded-lg relative z-10"
+                              />
+                            </div>
 
-                        <div className="grid grid-cols-2 gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDepositStep(1);
-                              setFormError(null);
-                            }}
-                            className="py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg font-bold text-xs border border-zinc-800 transition-colors"
+                            <div className="space-y-2">
+                              <label className="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">UTR number/UPI Ref No/Transaction ID (12 digits)</label>
+                              <input
+                                type="text"
+                                required
+                                pattern="\d{12}"
+                                maxLength={12}
+                                value={upiReferenceId}
+                                onChange={(e) => setUpiReferenceId(e.target.value.replace(/\D/g, ''))}
+                                placeholder="Enter 12-digit UTR/UPI Ref/Txn ID"
+                                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors text-center font-mono tracking-widest"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDepositStep(1);
+                                  setFormError(null);
+                                }}
+                                className="py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg font-bold text-xs border border-zinc-800 transition-colors"
                           >
                             Back
                           </button>
@@ -1612,7 +1790,9 @@ export default function DashboardPage() {
                       </div>
                     )}
                   </form>
-                </div>
+                </>
+              )}
+            </div>
 
                 {/* Withdraw Form */}
                 <div className="p-5 glass-panel border border-zinc-800/80 rounded-2xl space-y-4">
