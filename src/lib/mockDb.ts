@@ -461,9 +461,6 @@ export const mockDb = {
   getPaymentQr: () => getStore('masharena_payment_qr', '/payment_qr.jpg'),
   savePaymentQr: (url: string) => setStore('masharena_payment_qr', url),
 
-  // Tutorial Video Settings
-  getTutorialVideoUrl: () => getStore('masharena_tutorial_video_url', 'https://www.youtube.com/embed/dQw4w9WgXcQ'),
-  saveTutorialVideoUrl: (url: string) => setStore('masharena_tutorial_video_url', url),
 };
 
 export interface LeaderboardPlayer {

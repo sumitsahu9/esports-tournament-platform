@@ -288,7 +288,6 @@ const tutorialSlides: TutorialSlide[] = [
 export default function LandingPage() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialIndex, setTutorialIndex] = useState(0);
-  const [tutorialVideoUrl, setTutorialVideoUrl] = useState('https://www.youtube.com/embed/dQw4w9WgXcQ');
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -430,9 +429,6 @@ export default function LandingPage() {
 
         const wdList = mockDb.getWithdrawals().filter((w: any) => w.status === 'Approved');
         setWithdrawals(wdList);
-
-        const video = mockDb.getTutorialVideoUrl();
-        setTutorialVideoUrl(video);
       } else {
         // 1. Fetch tournaments
         const { data: tData, error: tError } = await supabase
@@ -460,19 +456,7 @@ export default function LandingPage() {
           setWithdrawals(wdData);
         }
 
-        // 3. Fetch Tutorial Video Setting from Supabase
-        try {
-          const { data: videoData } = await supabase
-            .from('admin_settings')
-            .select('value')
-            .eq('key', 'tutorial_video_url')
-            .maybeSingle();
-          if (videoData) {
-            setTutorialVideoUrl(videoData.value);
-          }
-        } catch (err) {
-          console.error('Failed to fetch settings video URL:', err);
-        }
+
       }
 
       await loadLeaderboardAndActivities(currentTourneys);
@@ -983,7 +967,7 @@ export default function LandingPage() {
                 {/* The video iframe */}
                 <div className="flex-grow w-full relative bg-zinc-950 rounded-xl overflow-hidden min-h-[220px] md:min-h-0">
                   <iframe
-                    src={tutorialVideoUrl}
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
                     title="Mash Arena Tutorial Walkthrough Video"
                     className="absolute inset-0 w-full h-full border-0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

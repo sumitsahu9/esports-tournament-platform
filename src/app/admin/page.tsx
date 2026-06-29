@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShieldAlert, ShieldCheck, Users, Trophy, Wallet, 
   Trash2, Edit, Plus, Check, X, Megaphone, Loader2, Calendar, Gamepad2,
-  MessageSquare, Send, RefreshCw, UserCheck, Skull, Play
+  MessageSquare, Send, RefreshCw, UserCheck, Skull
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -120,8 +120,6 @@ export default function AdminPanelPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [newQrCodeUrl, setNewQrCodeUrl] = useState('');
-  const [tutorialVideoUrl, setTutorialVideoUrl] = useState('');
-  const [newTutorialVideoUrl, setNewTutorialVideoUrl] = useState('');
   const [selectedTourneyId, setSelectedTourneyId] = useState<string>('');
   const [regsForSelectedTourney, setRegsForSelectedTourney] = useState<Registration[]>([]);
   
@@ -1022,9 +1020,6 @@ export default function AdminPanelPage() {
         const qr = mockDb.getPaymentQr();
         setQrCodeUrl(qr);
         setNewQrCodeUrl(qr);
-        const video = mockDb.getTutorialVideoUrl();
-        setTutorialVideoUrl(video);
-        setNewTutorialVideoUrl(video);
 
         setDataLoading(false);
         return;
@@ -1190,23 +1185,7 @@ export default function AdminPanelPage() {
         console.error('Failed to fetch admin settings QR:', err);
       }
 
-      // Fetch Tutorial Video Setting from Supabase
-      try {
-        const { data: videoData } = await supabase
-          .from('admin_settings')
-          .select('value')
-          .eq('key', 'tutorial_video_url')
-          .maybeSingle();
-        if (videoData) {
-          setTutorialVideoUrl(videoData.value);
-          setNewTutorialVideoUrl(videoData.value);
-        } else {
-          setTutorialVideoUrl('https://www.youtube.com/embed/dQw4w9WgXcQ');
-          setNewTutorialVideoUrl('https://www.youtube.com/embed/dQw4w9WgXcQ');
-        }
-      } catch (err) {
-        console.error('Failed to fetch admin settings video URL:', err);
-      }
+
 
     } catch (err) {
       console.error('Error fetching admin data:', err);
@@ -2057,37 +2036,7 @@ export default function AdminPanelPage() {
     }
   };
 
-  const handleUpdateTutorialVideo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTutorialVideoUrl.trim()) {
-      alert('Please enter a valid video URL');
-      return;
-    }
-    
-    setBtnLoading(true);
-    try {
-      if (isMockEnabled) {
-        mockDb.saveTutorialVideoUrl(newTutorialVideoUrl);
-        setTutorialVideoUrl(newTutorialVideoUrl);
-        alert('Tutorial Video URL updated successfully!');
-        await fetchData();
-        return;
-      }
 
-      const { error } = await supabase
-        .from('admin_settings')
-        .upsert({ key: 'tutorial_video_url', value: newTutorialVideoUrl });
-      
-      if (error) throw error;
-      setTutorialVideoUrl(newTutorialVideoUrl);
-      alert('Tutorial Video URL updated successfully!');
-      await fetchData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to update video URL');
-    } finally {
-      setBtnLoading(false);
-    }
-  };
 
   const handlePublishResults = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2617,55 +2566,7 @@ export default function AdminPanelPage() {
               </div>
             </div>
 
-            {/* Tutorial Video Settings */}
-            <div className="glass-panel border border-zinc-850 rounded-2xl p-5 sm:p-6 space-y-4">
-              <h3 className="text-lg font-bold text-zinc-200 flex items-center gap-2">
-                <Play className="w-5 h-5 text-purple-400" />
-                How It Works Tutorial Video Settings
-              </h3>
-              <p className="text-xs text-zinc-400 max-w-2xl">
-                Configure the URL of the playable tutorial video shown to players in the "How It Works" landing page section. You can use direct MP4/video file links or standard YouTube embed links (e.g. <code>https://www.youtube.com/embed/dQw4w9WgXcQ</code>).
-              </p>
 
-              <form onSubmit={handleUpdateTutorialVideo} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                <div className="md:col-span-2 space-y-2">
-                  <label className="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">Walkthrough Video URL</label>
-                  <input
-                    type="text"
-                    required
-                    value={newTutorialVideoUrl}
-                    onChange={(e) => setNewTutorialVideoUrl(e.target.value)}
-                    placeholder="e.g. https://www.youtube.com/embed/dQw4w9WgXcQ"
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-cyan-500/50 focus:outline-none text-sm text-zinc-150 transition-colors"
-                  />
-                </div>
-                <div>
-                  <button
-                    type="submit"
-                    disabled={btnLoading}
-                    className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-zinc-950 font-black rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    {btnLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update Video URL'}
-                  </button>
-                </div>
-              </form>
-
-              {/* Video Preview */}
-              {tutorialVideoUrl && (
-                <div className="pt-2">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold mb-2">Current Video Preview</span>
-                  <div className="w-full max-w-md aspect-video border border-zinc-800 rounded-lg bg-zinc-950 overflow-hidden">
-                    <iframe
-                      src={tutorialVideoUrl}
-                      title="Tutorial Video Preview"
-                      className="w-full h-full border-0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Middle: Pending Deposit Requests */}
             <div className="space-y-4">
