@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-zinc-100 uppercase tracking-wide">1. Information We Collect</h2>
             <p className="text-sm text-zinc-400 leading-relaxed">
-              We collect information that you directly provide to us during account signup, linked profile updates, or support conversations. This includes your name, email address, phone number, in-game characters credentials (BGMI Character ID, Free Fire UID, IGNs), and UPI ID details for payouts.
+              We collect information that you directly provide to us during account signup, linked profile updates, or support conversations. This includes your name, email address, phone number, in-game characters credentials (BGMI UID, Free Fire UID, IGNs), and UPI ID details for payouts.
             </p>
           </section>
 

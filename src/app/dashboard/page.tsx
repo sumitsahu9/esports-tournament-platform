@@ -1824,7 +1824,7 @@ export default function DashboardPage() {
                       type="text"
                       value={editBgmiCharId}
                       onChange={(e) => setEditBgmiCharId(e.target.value)}
-                      placeholder="BGMI Character ID"
+                      placeholder="BGMI UID"
                       className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-xs text-zinc-105 transition-colors"
                     />
                     <input

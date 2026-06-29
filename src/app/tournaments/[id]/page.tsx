@@ -1064,7 +1064,7 @@ export default function TournamentDetailPage() {
               <form onSubmit={handleJoinTournament} className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    {isBGMI ? 'BGMI Character ID' : 'Free Fire UID'}
+                    {isBGMI ? 'BGMI UID' : 'Free Fire UID'}
                   </label>
                   <input
                     type="text"

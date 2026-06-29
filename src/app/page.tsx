@@ -176,9 +176,9 @@ const tutorialSlides: TutorialSlide[] = [
   },
   {
     step: '2',
-    heading: '👤 Profile Setup: Game IDs & Character Details',
-    hinglishScript: "Sabse pehle top menu me 'Dashboard' par click karein. Dashboard page ke bottom me aapko Profile settings milegi. Yahan apna BGMI aur Free Fire ka IGN (In-Game Name) aur Character ID set karein takki register karte waqt aapki details automatic verify ho sakein.",
-    hindiScript: "सबसे पहले टॉप मेनू में 'डैशबोर्ड' पर क्लिक करें। डैशबोर्ड पेज के बॉटम में आपको प्रोफाइल सेटिंग्स मिलेगी। यहां अपना BGMI और Free Fire का IGN (इन-गेम नाम) और कैरेक्टर आईडी सेट करें ताकि रजिस्टर करते समय आपकी डिटेल्स आटोमेटिक वेरीफाई हो सकें।",
+    heading: '👤 Profile Setup: Game IDs & UID Details',
+    hinglishScript: "Sabse pehle top menu me 'Dashboard' par click karein. Dashboard page ke bottom me aapko Profile settings milegi. Yahan apna BGMI aur Free Fire ka IGN (In-Game Name) aur UID set karein takki register karte waqt aapki details automatic verify ho sakein.",
+    hindiScript: "सबसे पहले टॉप मेनू में 'डैशबोर्ड' पर क्लिक करें। डैशबोर्ड पेज के बॉटम में आपको प्रोफाइल सेटिंग्स मिलेगी। यहां अपना BGMI और Free Fire का IGN (इन-गेम नाम) और यूआईडी (UID) सेट करें ताकि रजिस्टर करते समय आपकी डिटेल्स आटोमेटिक वेरीफाई हो सकें।",
     component: (
       <div className="w-full max-w-sm p-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-left space-y-3">
         <h5 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Profile Configuration</h5>
@@ -1043,7 +1043,7 @@ export default function LandingPage() {
                           <br />
                           1. Screen ke top right corner me <strong>MASH ARENA</strong> profile dropdown ya <strong>Dashboard</strong> button par click karein.
                           <br />
-                          2. Page ke bottom me scroll karke <strong>Profile configuration</strong> me jaa kar apna BGMI / Free Fire Character ID aur IGN save karein.
+                          2. Page ke bottom me scroll karke <strong>Profile configuration</strong> me jaa kar apna BGMI / Free Fire UID aur IGN save karein.
                           <br />
                           3. Dashboard me wallet card par <strong>Add Cash</strong> par click karein, open QR scan karein, pay karke UTR ID submit karein.
                         </p>

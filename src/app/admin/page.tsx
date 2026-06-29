@@ -3299,7 +3299,7 @@ export default function AdminPanelPage() {
                 Ban Player
               </h3>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Immediately block a player from joining matches. Search by registered email, game IGN, or character ID/UID.
+                Immediately block a player from joining matches. Search by registered email, game IGN, or UID.
               </p>
               
               <form onSubmit={handleBanUser} className="space-y-4">
@@ -3310,7 +3310,7 @@ export default function AdminPanelPage() {
                     required
                     value={searchBannedUser}
                     onChange={(e) => setSearchBannedUser(e.target.value)}
-                    placeholder="Email / IGN / Character ID"
+                    placeholder="Email / IGN / UID"
                     className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs text-zinc-100 focus:outline-none"
                   />
                 </div>

@@ -57,7 +57,7 @@ export default function RulesPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-bold text-zinc-100 uppercase tracking-wide">1. Registration & Lobby Entry</h2>
             <ul className="list-disc pl-5 text-sm text-zinc-400 space-y-2">
-              <li>Your In-Game Name (IGN) and Game character ID must match your registered details on the platform exactly.</li>
+              <li>Your In-Game Name (IGN) and Game UID must match your registered details on the platform exactly.</li>
               <li>Only registered players are allowed inside the custom room slots. Any unregistered player entering the custom room will be kicked by moderators immediately.</li>
               <li>Under no circumstances should you share the Room ID and Password with players outside the tournament registry. Sharing credentials is a bannable offense.</li>
             </ul>
