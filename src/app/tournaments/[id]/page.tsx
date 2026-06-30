@@ -67,6 +67,75 @@ export default function TournamentDetailPage() {
   const [gameIdInput, setGameIdInput] = useState('');
   const [ignInput, setIgnInput] = useState('');
   const [paymentRefInput, setPaymentRefInput] = useState('');
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+
+  // Load Cashfree checkout SDK dynamically
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  const loadCashfree = async () => {
+    if ((window as any).Cashfree) return (window as any).Cashfree;
+    return new Promise((resolve) => {
+      const interval = setInterval(() => {
+        if ((window as any).Cashfree) {
+          clearInterval(interval);
+          resolve((window as any).Cashfree);
+        }
+      }, 100);
+    });
+  };
+
+  const verifyCheckoutOrder = async (cfOrderId: string) => {
+    setVerifyingPayment(true);
+    try {
+      const sessionRes = await supabase.auth.getSession();
+      const token = sessionRes.data.session?.access_token || '';
+
+      const res = await fetch('/api/cashfree/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          order_id: cfOrderId,
+          mock: cfOrderId.includes('cf_mock') || isMockEnabled
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to verify payment');
+      }
+
+      alert('Payment successful! Your registration has been automatically approved.');
+      
+      // Clean query params from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+
+      await fetchAllData();
+    } catch (err: any) {
+      alert(`Payment verification failed: ${err.message || err}`);
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const cfOrderId = urlParams.get('cf_order_id');
+    if (cfOrderId && user) {
+      verifyCheckoutOrder(cfOrderId);
+    }
+  }, [user]);
 
   // Coupon states
   const [couponInput, setCouponInput] = useState('');
@@ -534,10 +603,59 @@ export default function TournamentDetailPage() {
     setErrorMsg(null);
 
     try {
+      if (!user) throw new Error('Unauthorized');
+
+      const orderId = `cf_reg_${Date.now()}`;
+      const payableAmount = Math.max(0, (tournament?.entry_fee || 0) - discountAmount);
+
+      // Free registration flow (due to free entry or coupon code discount)
+      if (payableAmount === 0) {
+        if (isMockEnabled) {
+          const allRegs = mockDb.getRegistrations();
+          if (allRegs.some((r: any) => r.tournament_id === id && r.user_id === user.id)) {
+            throw new Error('You are already registered for this tournament');
+          }
+          const regId = `reg-${Date.now()}`;
+          allRegs.push({
+            id: regId,
+            tournament_id: id,
+            user_id: user.id,
+            game_id: gameIdInput,
+            ign: ignInput,
+            coupon_discount: discountAmount,
+            check_in_status: 'Checked In',
+            created_at: new Date().toISOString()
+          });
+          mockDb.saveRegistrations(allRegs);
+
+          // Increment slots
+          const tourneyList = mockDb.getTournaments();
+          const tIdx = tourneyList.findIndex((t: any) => t.id === id);
+          if (tIdx !== -1) {
+            tourneyList[tIdx].filled_slots += 1;
+            mockDb.saveTournaments(tourneyList);
+          }
+        } else {
+          const { error } = await supabase.rpc('register_via_payment_link', {
+            p_tournament_id: id,
+            p_game_id: gameIdInput,
+            p_ign: ignInput,
+            p_payment_ref: 'Free Coupon'
+          });
+          if (error) throw error;
+        }
+
+        alert('Joined tournament successfully! (Free registration)');
+        setShowJoinModal(false);
+        setAppliedCoupon(null);
+        setCouponInput('');
+        setDiscountAmount(0);
+        await fetchAllData();
+        return;
+      }
+
+      // Paid checkout flow - create pending registration first
       if (isMockEnabled) {
-        if (!user) throw new Error('Unauthorized');
-        
-        // Load tournament
         const tourneyList = mockDb.getTournaments();
         const tIdx = tourneyList.findIndex((t: any) => t.id === id);
         if (tIdx === -1) throw new Error('Tournament not found');
@@ -550,192 +668,89 @@ export default function TournamentDetailPage() {
           throw new Error('Tournament slots are full');
         }
 
-        // Check registration
         const allRegs = mockDb.getRegistrations();
         if (allRegs.some((r: any) => r.tournament_id === id && r.user_id === user.id)) {
           throw new Error('You are already registered for this tournament');
         }
 
-        if (tourney.payment_link) {
-          if (!paymentRefInput.trim()) {
-            throw new Error('Please enter the UPI transaction ID / Reference number.');
-          }
-
-          // Add registration
-          const regId = `reg-${Date.now()}`;
-          const newReg = {
-            id: regId,
-            tournament_id: id,
-            user_id: user.id,
-            game_id: gameIdInput,
-            ign: ignInput,
-            coupon_discount: 0,
-            check_in_status: 'Pending',
-            payment_ref: paymentRefInput.trim(),
-            created_at: new Date().toISOString()
-          };
-          allRegs.push(newReg);
-          mockDb.saveRegistrations(allRegs);
-
-          // Increment slots
-          tourney.filled_slots += 1;
-          tourneyList[tIdx] = tourney;
-          mockDb.saveTournaments(tourneyList);
-
-          alert('Joined tournament successfully! Your payment proof is under verification.');
-          setShowJoinModal(false);
-          setPaymentRefInput('');
-          await fetchAllData();
-          return;
-        }
-
-        // Get wallet (include bonus wallet)
-        const walletsMap = mockDb.getWallets();
-        const userWallet = walletsMap[user.id] || {
-          id: `w-${user.id}`,
-          user_id: user.id,
-          deposit_balance: 0,
-          winning_balance: 0,
-          bonus_balance: 0,
-          created_at: new Date().toISOString()
-        };
-
-        const checkoutFee = tourney.entry_fee - discountAmount;
-        const totalBal = userWallet.deposit_balance + userWallet.winning_balance + (userWallet.bonus_balance || 0);
-        if (totalBal < checkoutFee) {
-          throw new Error('Insufficient wallet balance. Please add funds');
-        }
-
-        // Deduct Order: Bonus -> Deposit -> Winning
-        let remainingFee = checkoutFee;
-        let deductBonus = 0;
-        let deductDeposit = 0;
-        let deductWinning = 0;
-
-        if (userWallet.bonus_balance >= remainingFee) {
-          deductBonus = remainingFee;
-          remainingFee = 0;
-        } else {
-          deductBonus = userWallet.bonus_balance || 0;
-          remainingFee -= deductBonus;
-        }
-
-        if (remainingFee > 0) {
-          if (userWallet.deposit_balance >= remainingFee) {
-            deductDeposit = remainingFee;
-            remainingFee = 0;
-          } else {
-            deductDeposit = userWallet.deposit_balance;
-            remainingFee -= deductDeposit;
-          }
-        }
-
-        if (remainingFee > 0) {
-          deductWinning = remainingFee;
-        }
-
-        userWallet.bonus_balance = (userWallet.bonus_balance || 0) - deductBonus;
-        userWallet.deposit_balance -= deductDeposit;
-        userWallet.winning_balance -= deductWinning;
-        walletsMap[user.id] = userWallet;
-        mockDb.saveWallets(walletsMap);
-
-        // Update Coupon count
-        if (appliedCoupon) {
-          const coupons = mockDb.getCoupons();
-          const cIdx = coupons.findIndex((c: any) => c.id === appliedCoupon.id);
-          if (cIdx !== -1) {
-            coupons[cIdx].times_used += 1;
-            mockDb.saveCoupons(coupons);
-          }
-        }
-
-        // Add registration
-        const regId = `reg-${Date.now()}`;
-        const newReg = {
-          id: regId,
+        allRegs.push({
+          id: `reg-${Date.now()}`,
           tournament_id: id,
           user_id: user.id,
           game_id: gameIdInput,
           ign: ignInput,
           coupon_discount: discountAmount,
           check_in_status: 'Pending',
-          created_at: new Date().toISOString()
-        };
-        allRegs.push(newReg);
-        mockDb.saveRegistrations(allRegs);
-
-        // Increment slots
-        tourney.filled_slots += 1;
-        tourneyList[tIdx] = tourney;
-        mockDb.saveTournaments(tourneyList);
-
-        // Add transaction
-        const allTx = mockDb.getTransactions();
-        allTx.push({
-          id: `tx-${Date.now()}`,
-          wallet_id: userWallet.id,
-          type: 'Entry Fee',
-          amount: checkoutFee,
-          status: 'Completed',
-          reference_id: regId,
-          description: `Registration fee for tournament ${tourney.title} (Discount: ₹${discountAmount})`,
+          payment_ref: orderId,
           created_at: new Date().toISOString()
         });
-        mockDb.saveTransactions(allTx);
+        mockDb.saveRegistrations(allRegs);
+      } else {
+        const { error } = await supabase.rpc('create_pending_registration', {
+          p_tournament_id: id,
+          p_game_id: gameIdInput,
+          p_ign: ignInput,
+          p_order_id: orderId
+        });
+        if (error) throw error;
+      }
 
-        alert('Joined tournament successfully!');
+      // Call Cashfree order API to generate session ID
+      const response = await fetch('/api/cashfree/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: payableAmount,
+          customerId: user.id,
+          customerEmail: user.email,
+          customerPhone: (profile as any)?.phone || (profile as any)?.phone_number || '9999999999',
+          returnUrl: `${window.location.origin}/tournaments/${id}?cf_order_id=${orderId}`,
+          orderId: orderId
+        })
+      });
+
+      const orderData = await response.json();
+      if (!response.ok) {
+        throw new Error(orderData.error || 'Failed to initialize payment');
+      }
+
+      if (orderData.mock) {
+        // Simulated checkout success automatically in mock mode
+        const sessionRes = await supabase.auth.getSession();
+        const token = sessionRes.data.session?.access_token || '';
+
+        const verifyRes = await fetch('/api/cashfree/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            order_id: orderId,
+            amount: payableAmount,
+            mock: true
+          })
+        });
+
+        const verifyData = await verifyRes.json();
+        if (!verifyRes.ok) throw new Error(verifyData.error || 'Mock verification failed');
+
+        alert('Simulated Direct Payment Successful! Joined tournament lobby.');
         setShowJoinModal(false);
         setAppliedCoupon(null);
         setCouponInput('');
         setDiscountAmount(0);
-        await refreshWallet();
         await fetchAllData();
-        return;
-      }
-
-      if (tournament?.payment_link) {
-        if (!paymentRefInput.trim()) {
-          throw new Error('Please enter the UPI transaction ID / Reference number.');
-        }
-
-        const { data, error } = await supabase.rpc('register_via_payment_link', {
-          p_tournament_id: id,
-          p_game_id: gameIdInput,
-          p_ign: ignInput,
-          p_payment_ref: paymentRefInput.trim()
+      } else {
+        const cashfree = await loadCashfree();
+        cashfree.checkout({
+          paymentSessionId: orderData.payment_session_id,
+          redirectTarget: "_self"
         });
-
-        if (error) throw error;
-
-        alert('Joined tournament successfully! Your payment proof is under verification.');
-        setShowJoinModal(false);
-        setPaymentRefInput('');
-        await fetchAllData();
-        return;
       }
-
-      // 1. Call custom RPC database transaction
-      const { data, error } = await supabase.rpc('register_for_tournament', {
-        p_tournament_id: id,
-        p_game_id: gameIdInput,
-        p_ign: ignInput,
-        p_coupon_code: appliedCoupon?.code || null
-      });
-
-      if (error) throw error;
-
-      // 2. Success
-      alert('Joined tournament successfully!');
-      setShowJoinModal(false);
-      setAppliedCoupon(null);
-      setCouponInput('');
-      setDiscountAmount(0);
-      await refreshWallet();
-      await fetchAllData();
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || 'An error occurred during registration. Check wallet balance.');
+      setErrorMsg(err.message || 'An error occurred during payment checkout.');
     } finally {
       setJoinLoading(false);
     }
@@ -770,6 +785,13 @@ export default function TournamentDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 w-full space-y-8">
+      {verifyingPayment && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-sm">
+          <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
+          <h3 className="text-lg font-bold text-white">Verifying Payment...</h3>
+          <p className="text-xs text-zinc-400 mt-1">Please do not refresh or close this page.</p>
+        </div>
+      )}
       {/* Back Button */}
       <div>
         <Link href="/" className="inline-flex items-center gap-1 text-sm font-semibold text-zinc-400 hover:text-white transition-colors">
@@ -1148,99 +1170,55 @@ export default function TournamentDetailPage() {
                   />
                 </div>
 
-                {tournament.payment_link ? (
-                  <div className="p-4 rounded-xl bg-zinc-950 border border-purple-500/20 space-y-4">
-                    <div className="text-center py-2 bg-purple-950/20 rounded-lg border border-purple-500/10">
-                      <span className="text-[10px] text-zinc-550 uppercase tracking-wider block font-bold">Pay Specific Entry Fee</span>
-                      <span className="text-lg font-black text-purple-400">₹{tournament.entry_fee.toFixed(2)}</span>
-                    </div>
-
-                    <a
-                      href={tournament.payment_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+                {/* Coupon Code Input */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                    Coupon Code
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value)}
+                      placeholder="e.g. MASH50"
+                      className="flex-grow px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-xs text-zinc-100 transition-colors uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      className="px-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 rounded-lg text-xs font-bold text-purple-400 flex items-center gap-1"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Click to Pay via Payment Link
-                    </a>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-zinc-550 uppercase tracking-wider block font-bold">UPI Ref No / Transaction ID (12 digits)</label>
-                      <input
-                        type="text"
-                        required
-                        pattern="\d{12}"
-                        maxLength={12}
-                        value={paymentRefInput}
-                        onChange={(e) => setPaymentRefInput(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Enter 12-digit UPI transaction reference"
-                        className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-xs text-zinc-100 text-center font-mono tracking-widest"
-                      />
-                    </div>
+                      <Tag className="w-3.5 h-3.5" />
+                      Apply
+                    </button>
                   </div>
-                ) : (
-                  <>
-                    {/* Coupon Code Input */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                        Coupon Code
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={couponInput}
-                          onChange={(e) => setCouponInput(e.target.value)}
-                          placeholder="e.g. MASH50"
-                          className="flex-grow px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-xs text-zinc-100 transition-colors uppercase"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleApplyCoupon}
-                          className="px-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 rounded-lg text-xs font-bold text-purple-400 flex items-center gap-1"
-                        >
-                          <Tag className="w-3.5 h-3.5" />
-                          Apply
-                        </button>
-                      </div>
-                      {couponError && (
-                        <span className="text-[10px] text-red-400 font-bold block mt-1">{couponError}</span>
-                      )}
-                      {appliedCoupon && (
-                        <span className="text-[10px] text-emerald-400 font-bold block mt-1">
-                          Coupon Applied: {appliedCoupon.code} (-₹{discountAmount})
-                        </span>
-                      )}
-                    </div>
+                  {couponError && (
+                    <span className="text-[10px] text-red-400 font-bold block mt-1">{couponError}</span>
+                  )}
+                  {appliedCoupon && (
+                    <span className="text-[10px] text-emerald-400 font-bold block mt-1">
+                      Coupon Applied: {appliedCoupon.code} (-₹{discountAmount})
+                    </span>
+                  )}
+                </div>
 
-                    {/* Balance validation check */}
-                    <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-900 space-y-1.5">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-zinc-500">Wallet balance:</span>
-                        <span className="text-zinc-200">₹{totalBalance.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-zinc-500">Registration fee:</span>
-                        <span className="text-zinc-200">₹{tournament.entry_fee.toFixed(2)}</span>
-                      </div>
-                      {discountAmount > 0 && (
-                        <div className="flex justify-between text-xs font-semibold text-emerald-450">
-                          <span>Discount:</span>
-                          <span>-₹{discountAmount.toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-xs font-bold pt-1.5 border-t border-zinc-900 mt-1">
-                        <span className="text-zinc-400">Total payable:</span>
-                        <span className="text-white">₹{(tournament.entry_fee - discountAmount).toFixed(2)}</span>
-                      </div>
-                      {!isBalanceSufficient && (
-                        <div className="text-[10px] text-red-400 font-bold uppercase pt-1.5 border-t border-zinc-900 mt-1">
-                          ⚠️ Insufficient funds. Add mock deposits in Dashboard.
-                        </div>
-                      )}
+                {/* Direct Payment Checkout Summary */}
+                <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-900 space-y-2">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-zinc-500">Registration fee:</span>
+                    <span className="text-zinc-200">₹{tournament.entry_fee.toFixed(2)}</span>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-xs font-semibold text-emerald-450">
+                      <span>Discount:</span>
+                      <span>-₹{discountAmount.toFixed(2)}</span>
                     </div>
-                  </>
-                )}
+                  )}
+                  <div className="flex justify-between text-xs font-bold pt-2 border-t border-zinc-900 mt-1">
+                    <span className="text-zinc-400 font-bold">Total payable online:</span>
+                    <span className="text-purple-400 font-black">₹{Math.max(0, tournament.entry_fee - discountAmount).toFixed(2)}</span>
+                  </div>
+                </div>
 
                 {/* Action buttons */}
                 <div className="grid grid-cols-2 gap-3 pt-2">
@@ -1260,16 +1238,18 @@ export default function TournamentDetailPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={joinLoading || (!tournament.payment_link && !isBalanceSufficient)}
+                    disabled={joinLoading}
                     className="py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-zinc-800 disabled:to-zinc-800 text-white rounded-xl font-bold text-xs shadow-[0_0_15px_rgba(147,51,234,0.3)] transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
                     {joinLoading ? (
                       <>
                         <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                        Joining Lobby...
+                        Processing...
                       </>
+                    ) : Math.max(0, tournament.entry_fee - discountAmount) === 0 ? (
+                      'Join Free'
                     ) : (
-                      'Confirm Join'
+                      `Pay ₹${Math.max(0, tournament.entry_fee - discountAmount).toFixed(2)} & Register`
                     )}
                   </button>
                 </div>

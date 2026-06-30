@@ -24,8 +24,12 @@ export async function POST(request: NextRequest) {
     // Allow mock/simulation in dev environments if keys are not configured
     if (!appId || !secretKey || appId.includes('Dummy')) {
       console.log('Cashfree webhook simulation: verifying simulated order');
-      if (orderId.includes('cf_mock') || orderId.includes('manual_order')) {
-        await processWebhookOrder(orderId, orderId, payload.data?.order?.order_amount || 100);
+      if (orderId.includes('cf_mock') || orderId.includes('manual_order') || orderId.startsWith('cf_reg_')) {
+        if (orderId.startsWith('cf_reg_')) {
+          await processWebhookRegistration(orderId, payload.data?.order?.order_amount || 100);
+        } else {
+          await processWebhookOrder(orderId, orderId, payload.data?.order?.order_amount || 100);
+        }
         return NextResponse.json({ success: true, message: 'Simulated webhook processed' });
       }
       return NextResponse.json({ error: 'Mock keys not configured' }, { status: 500 });
@@ -52,6 +56,10 @@ export async function POST(request: NextRequest) {
 
     if (cfOrder.order_status === 'PAID') {
       const paymentId = payload.data?.payment?.cf_payment_id?.toString() || `cf_pay_${orderId}`;
+      if (orderId.startsWith('cf_reg_')) {
+        await processWebhookRegistration(orderId, Number(cfOrder.order_amount));
+        return NextResponse.json({ success: true, message: 'Registration processed successfully via webhook' });
+      }
       await processWebhookOrder(orderId, paymentId, Number(cfOrder.order_amount));
       return NextResponse.json({ success: true, message: 'Deposit processed successfully via webhook' });
     } else {
@@ -77,6 +85,30 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+async function processWebhookRegistration(orderId: string, amount: number) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jzrrqkfhzcfyyoreiapa.supabase.co';
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+  if (!supabaseServiceKey) {
+    console.warn('SUPABASE_SERVICE_ROLE_KEY is not defined. Webhook cannot execute auth-bypassed updates.');
+    return;
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+  const { data, error } = await supabaseAdmin.rpc('confirm_registration_payment', {
+    p_order_id: orderId,
+    p_amount: amount
+  });
+
+  if (error) {
+    console.error(`Failed to confirm registration via webhook for orderId ${orderId}:`, error);
+    return;
+  }
+
+  console.log(`Registration confirmed successfully via webhook for orderId ${orderId} (data: ${JSON.stringify(data)})`);
 }
 
 async function processWebhookOrder(orderId: string, paymentId: string, amount: number) {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount, customerId, customerEmail, customerPhone, returnUrl } = await request.json();
+    const { amount, customerId, customerEmail, customerPhone, returnUrl, orderId } = await request.json();
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     if (!appId || !secretKey || appId.includes('Dummy') || appId.includes('your_')) {
       // Return a simulated mock order for developer testing/fallback
       return NextResponse.json({
-        cf_order_id: `cf_mock_${Date.now()}`,
+        cf_order_id: orderId || `cf_mock_${Date.now()}`,
         payment_session_id: `session_mock_${Date.now()}`,
         order_amount: amount,
         order_currency: 'INR',
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       ? 'https://api.cashfree.com/pg/orders' 
       : 'https://sandbox.cashfree.com/pg/orders';
 
-    const orderId = `order_${Date.now()}`;
+    const finalOrderId = orderId || `order_${Date.now()}`;
 
     const response = await fetch(cashfreeEndpoint, {
       method: 'POST',
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        order_id: orderId,
+        order_id: finalOrderId,
         order_amount: Number(amount),
         order_currency: 'INR',
         customer_details: {

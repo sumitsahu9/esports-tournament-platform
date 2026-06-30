@@ -31,6 +31,15 @@ export async function POST(request: NextRequest) {
 
     // Handle mock payment verification
     if (mock) {
+      if (order_id.startsWith('cf_reg_')) {
+        const { data, error } = await supabaseUserClient.rpc('confirm_registration_payment', {
+          p_order_id: order_id,
+          p_amount: Number(amount)
+        });
+        if (error) throw error;
+        return NextResponse.json({ success: true, message: 'Mock registration payment verified successfully', data });
+      }
+
       const { data, error } = await supabaseUserClient.rpc('confirm_deposit', {
         p_order_id: order_id,
         p_payment_id: `pay_mock_${Date.now()}`,
@@ -76,6 +85,20 @@ export async function POST(request: NextRequest) {
         message: `Payment is not completed. Current status: ${cfOrder.order_status}`,
         status: cfOrder.order_status
       }, { status: 400 });
+    }
+
+    if (order_id.startsWith('cf_reg_')) {
+      const { data, error } = await supabaseUserClient.rpc('confirm_registration_payment', {
+        p_order_id: order_id,
+        p_amount: Number(cfOrder.order_amount)
+      });
+
+      if (error) {
+        console.error('Error confirming registration in DB:', error);
+        throw error;
+      }
+
+      return NextResponse.json({ success: true, message: 'Registration payment verified successfully', data });
     }
 
     // Atomically execute SQL RPC function to credit wallet balance and log transaction ledger
