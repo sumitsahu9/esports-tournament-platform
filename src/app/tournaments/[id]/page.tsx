@@ -26,6 +26,7 @@ interface Tournament {
   rules: string;
   status: 'Upcoming' | 'Live' | 'Completed';
   room_published: boolean;
+  payment_link?: string;
 }
 
 interface Registration {
@@ -35,6 +36,7 @@ interface Registration {
   game_id: string;
   ign: string;
   created_at: string;
+  payment_ref?: string;
   profiles?: {
     name: string;
   };
@@ -64,6 +66,7 @@ export default function TournamentDetailPage() {
   // Form inputs for joining
   const [gameIdInput, setGameIdInput] = useState('');
   const [ignInput, setIgnInput] = useState('');
+  const [paymentRefInput, setPaymentRefInput] = useState('');
 
   // Coupon states
   const [couponInput, setCouponInput] = useState('');
@@ -553,6 +556,39 @@ export default function TournamentDetailPage() {
           throw new Error('You are already registered for this tournament');
         }
 
+        if (tourney.payment_link) {
+          if (!paymentRefInput.trim()) {
+            throw new Error('Please enter the UPI transaction ID / Reference number.');
+          }
+
+          // Add registration
+          const regId = `reg-${Date.now()}`;
+          const newReg = {
+            id: regId,
+            tournament_id: id,
+            user_id: user.id,
+            game_id: gameIdInput,
+            ign: ignInput,
+            coupon_discount: 0,
+            check_in_status: 'Pending',
+            payment_ref: paymentRefInput.trim(),
+            created_at: new Date().toISOString()
+          };
+          allRegs.push(newReg);
+          mockDb.saveRegistrations(allRegs);
+
+          // Increment slots
+          tourney.filled_slots += 1;
+          tourneyList[tIdx] = tourney;
+          mockDb.saveTournaments(tourneyList);
+
+          alert('Joined tournament successfully! Your payment proof is under verification.');
+          setShowJoinModal(false);
+          setPaymentRefInput('');
+          await fetchAllData();
+          return;
+        }
+
         // Get wallet (include bonus wallet)
         const walletsMap = mockDb.getWallets();
         const userWallet = walletsMap[user.id] || {
@@ -654,6 +690,27 @@ export default function TournamentDetailPage() {
         setCouponInput('');
         setDiscountAmount(0);
         await refreshWallet();
+        await fetchAllData();
+        return;
+      }
+
+      if (tournament?.payment_link) {
+        if (!paymentRefInput.trim()) {
+          throw new Error('Please enter the UPI transaction ID / Reference number.');
+        }
+
+        const { data, error } = await supabase.rpc('register_via_payment_link', {
+          p_tournament_id: id,
+          p_game_id: gameIdInput,
+          p_ign: ignInput,
+          p_payment_ref: paymentRefInput.trim()
+        });
+
+        if (error) throw error;
+
+        alert('Joined tournament successfully! Your payment proof is under verification.');
+        setShowJoinModal(false);
+        setPaymentRefInput('');
         await fetchAllData();
         return;
       }
@@ -1091,64 +1148,99 @@ export default function TournamentDetailPage() {
                   />
                 </div>
 
-                {/* Coupon Code Input */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    Coupon Code
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={couponInput}
-                      onChange={(e) => setCouponInput(e.target.value)}
-                      placeholder="e.g. MASH50"
-                      className="flex-grow px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-xs text-zinc-100 transition-colors uppercase"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyCoupon}
-                      className="px-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 rounded-lg text-xs font-bold text-purple-400 flex items-center gap-1"
-                    >
-                      <Tag className="w-3.5 h-3.5" />
-                      Apply
-                    </button>
-                  </div>
-                  {couponError && (
-                    <span className="text-[10px] text-red-400 font-bold block mt-1">{couponError}</span>
-                  )}
-                  {appliedCoupon && (
-                    <span className="text-[10px] text-emerald-400 font-bold block mt-1">
-                      Coupon Applied: {appliedCoupon.code} (-₹{discountAmount})
-                    </span>
-                  )}
-                </div>
+                {tournament.payment_link ? (
+                  <div className="p-4 rounded-xl bg-zinc-950 border border-purple-500/20 space-y-4">
+                    <div className="text-center py-2 bg-purple-950/20 rounded-lg border border-purple-500/10">
+                      <span className="text-[10px] text-zinc-550 uppercase tracking-wider block font-bold">Pay Specific Entry Fee</span>
+                      <span className="text-lg font-black text-purple-400">₹{tournament.entry_fee.toFixed(2)}</span>
+                    </div>
 
-                {/* Balance validation check */}
-                <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-900 space-y-1.5">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-zinc-500">Wallet balance:</span>
-                    <span className="text-zinc-200">₹{totalBalance.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-zinc-500">Registration fee:</span>
-                    <span className="text-zinc-200">₹{tournament.entry_fee.toFixed(2)}</span>
-                  </div>
-                  {discountAmount > 0 && (
-                    <div className="flex justify-between text-xs font-semibold text-emerald-450">
-                      <span>Discount:</span>
-                      <span>-₹{discountAmount.toFixed(2)}</span>
+                    <a
+                      href={tournament.payment_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Click to Pay via Payment Link
+                    </a>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-zinc-550 uppercase tracking-wider block font-bold">UPI Ref No / Transaction ID (12 digits)</label>
+                      <input
+                        type="text"
+                        required
+                        pattern="\d{12}"
+                        maxLength={12}
+                        value={paymentRefInput}
+                        onChange={(e) => setPaymentRefInput(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Enter 12-digit UPI transaction reference"
+                        className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-xs text-zinc-100 text-center font-mono tracking-widest"
+                      />
                     </div>
-                  )}
-                  <div className="flex justify-between text-xs font-bold pt-1.5 border-t border-zinc-900 mt-1">
-                    <span className="text-zinc-400">Total payable:</span>
-                    <span className="text-white">₹{(tournament.entry_fee - discountAmount).toFixed(2)}</span>
                   </div>
-                  {!isBalanceSufficient && (
-                    <div className="text-[10px] text-red-400 font-bold uppercase pt-1.5 border-t border-zinc-900 mt-1">
-                      ⚠️ Insufficient funds. Add mock deposits in Dashboard.
+                ) : (
+                  <>
+                    {/* Coupon Code Input */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                        Coupon Code
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value)}
+                          placeholder="e.g. MASH50"
+                          className="flex-grow px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-xs text-zinc-100 transition-colors uppercase"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          className="px-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 rounded-lg text-xs font-bold text-purple-400 flex items-center gap-1"
+                        >
+                          <Tag className="w-3.5 h-3.5" />
+                          Apply
+                        </button>
+                      </div>
+                      {couponError && (
+                        <span className="text-[10px] text-red-400 font-bold block mt-1">{couponError}</span>
+                      )}
+                      {appliedCoupon && (
+                        <span className="text-[10px] text-emerald-400 font-bold block mt-1">
+                          Coupon Applied: {appliedCoupon.code} (-₹{discountAmount})
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
+
+                    {/* Balance validation check */}
+                    <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-900 space-y-1.5">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span className="text-zinc-500">Wallet balance:</span>
+                        <span className="text-zinc-200">₹{totalBalance.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span className="text-zinc-500">Registration fee:</span>
+                        <span className="text-zinc-200">₹{tournament.entry_fee.toFixed(2)}</span>
+                      </div>
+                      {discountAmount > 0 && (
+                        <div className="flex justify-between text-xs font-semibold text-emerald-450">
+                          <span>Discount:</span>
+                          <span>-₹{discountAmount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-xs font-bold pt-1.5 border-t border-zinc-900 mt-1">
+                        <span className="text-zinc-400">Total payable:</span>
+                        <span className="text-white">₹{(tournament.entry_fee - discountAmount).toFixed(2)}</span>
+                      </div>
+                      {!isBalanceSufficient && (
+                        <div className="text-[10px] text-red-400 font-bold uppercase pt-1.5 border-t border-zinc-900 mt-1">
+                          ⚠️ Insufficient funds. Add mock deposits in Dashboard.
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 {/* Action buttons */}
                 <div className="grid grid-cols-2 gap-3 pt-2">
@@ -1168,7 +1260,7 @@ export default function TournamentDetailPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={joinLoading || !isBalanceSufficient}
+                    disabled={joinLoading || (!tournament.payment_link && !isBalanceSufficient)}
                     className="py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-zinc-800 disabled:to-zinc-800 text-white rounded-xl font-bold text-xs shadow-[0_0_15px_rgba(147,51,234,0.3)] transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
                     {joinLoading ? (

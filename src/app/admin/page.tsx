@@ -35,6 +35,7 @@ interface Tournament {
   rules: string;
   status: 'Upcoming' | 'Live' | 'Completed';
   room_published: boolean;
+  payment_link?: string;
 }
 
 interface Withdrawal {
@@ -60,6 +61,7 @@ interface Registration {
   game_id: string;
   ign: string;
   check_in_status?: 'Checked In' | 'Pending' | 'DNQ';
+  payment_ref?: string;
   profiles?: {
     name: string;
   };
@@ -156,6 +158,8 @@ export default function AdminPanelPage() {
   const [editTime, setEditTime] = useState('');
   const [editRules, setEditRules] = useState('');
   const [editStatus, setEditStatus] = useState<'Upcoming' | 'Live' | 'Completed'>('Upcoming');
+  const [tourneyPaymentLink, setTourneyPaymentLink] = useState('');
+  const [editPaymentLink, setEditPaymentLink] = useState('');
 
   // Support Tickets states
   const [adminTickets, setAdminTickets] = useState<any[]>([]);
@@ -225,6 +229,7 @@ export default function AdminPanelPage() {
     setEditTime(localISOTime);
     setEditRules(t.rules || '');
     setEditStatus(t.status);
+    setEditPaymentLink(t.payment_link || '');
   };
 
   const handleEditTournament = async (e: React.FormEvent) => {
@@ -276,7 +281,8 @@ export default function AdminPanelPage() {
             start_time: startTimeISO,
             prize_pool: calculatedPool,
             rules: editRules,
-            status: editStatus
+            status: editStatus,
+            payment_link: editPaymentLink.trim() || undefined
           };
           mockDb.saveTournaments(list);
         }
@@ -298,7 +304,8 @@ export default function AdminPanelPage() {
           start_time: startTimeISO,
           prize_pool: calculatedPool,
           rules: editRules,
-          status: editStatus
+          status: editStatus,
+          payment_link: editPaymentLink.trim() || null
         })
         .eq('id', editingTournament.id);
 
@@ -1555,7 +1562,8 @@ export default function AdminPanelPage() {
           prize_pool: calculatedPool,
           rules: tourneyRules,
           status: 'Upcoming',
-          room_published: false
+          room_published: false,
+          payment_link: tourneyPaymentLink.trim() || undefined
         };
         list.push(newTourney);
         mockDb.saveTournaments(list);
@@ -1568,6 +1576,7 @@ export default function AdminPanelPage() {
         setTourneySlots('');
         setTourneyTime('');
         setTourneyRules('');
+        setTourneyPaymentLink('');
         await fetchData();
         return;
       }
@@ -1583,7 +1592,8 @@ export default function AdminPanelPage() {
           start_time: startTimeISO,
           prize_pool: calculatedPool,
           rules: tourneyRules,
-          status: 'Upcoming'
+          status: 'Upcoming',
+          payment_link: tourneyPaymentLink.trim() || null
         })
         .select();
 
@@ -1597,6 +1607,7 @@ export default function AdminPanelPage() {
       setTourneySlots('');
       setTourneyTime('');
       setTourneyRules('');
+      setTourneyPaymentLink('');
       await fetchData();
     } catch (err: any) {
       alert(err.message || 'Failed to create tournament');
@@ -2979,6 +2990,7 @@ export default function AdminPanelPage() {
                           <tr className="border-b border-zinc-900 text-zinc-550 font-bold uppercase bg-zinc-950/40">
                             <th className="p-3">Player name</th>
                             <th className="p-3">In-Game IGN</th>
+                            <th className="p-3">Payment Ref</th>
                             <th className="p-3 text-center">Status</th>
                             <th className="p-3 text-center">Action</th>
                           </tr>
@@ -2992,6 +3004,13 @@ export default function AdminPanelPage() {
                             <tr key={r.id} className="text-zinc-350 hover:bg-zinc-900/10">
                               <td className="p-3 font-semibold text-zinc-200">{r.profiles?.name || 'Player'}</td>
                               <td className="p-3 font-mono">{r.ign}</td>
+                              <td className="p-3 font-mono text-zinc-400">
+                                {r.payment_ref ? (
+                                  <span className="text-purple-400 font-bold">{r.payment_ref}</span>
+                                ) : (
+                                  <span className="text-zinc-550">Wallet Balance</span>
+                                )}
+                              </td>
                               <td className="p-3 text-center">
                                 <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
                                   r.check_in_status === 'Checked In'
@@ -3834,6 +3853,18 @@ export default function AdminPanelPage() {
                   />
                 </div>
 
+                {/* Payment Link */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Payment Link (Optional)</label>
+                  <input
+                    type="url"
+                    value={tourneyPaymentLink}
+                    onChange={(e) => setTourneyPaymentLink(e.target.value)}
+                    placeholder="e.g. https://pay.cashfree.com/order/..."
+                    className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-cyan-500/50 focus:outline-none text-sm text-zinc-100"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 pt-3">
                   <button
                     type="button"
@@ -3978,6 +4009,18 @@ export default function AdminPanelPage() {
                     value={editRules}
                     onChange={(e) => setEditRules(e.target.value)}
                     rows={3}
+                    className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-cyan-500/50 focus:outline-none text-sm text-zinc-100"
+                  />
+                </div>
+
+                {/* Payment Link */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Payment Link (Optional)</label>
+                  <input
+                    type="url"
+                    value={editPaymentLink}
+                    onChange={(e) => setEditPaymentLink(e.target.value)}
+                    placeholder="e.g. https://pay.cashfree.com/order/..."
                     className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-cyan-500/50 focus:outline-none text-sm text-zinc-100"
                   />
                 </div>

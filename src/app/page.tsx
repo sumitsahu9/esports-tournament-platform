@@ -24,6 +24,7 @@ interface Tournament {
   prize_pool: number;
   rules: string;
   status: 'Upcoming' | 'Live' | 'Completed';
+  payment_link?: string;
 }
 
 const mockTournaments: Tournament[] = [
