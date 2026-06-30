@@ -754,7 +754,7 @@ export default function TournamentDetailPage() {
         throw new Error(orderData.error || 'Failed to initialize payment');
       }
 
-      if (orderData.mock) {
+      if (orderData.mock && isMockEnabled) {
         // Simulated checkout success automatically in mock mode
         const sessionRes = await supabase.auth.getSession();
         const token = sessionRes.data.session?.access_token || '';

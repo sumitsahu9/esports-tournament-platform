@@ -31,6 +31,14 @@ export async function POST(request: NextRequest) {
 
     // Handle mock payment verification
     if (mock) {
+      const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+      if (!useMock) {
+        return NextResponse.json(
+          { error: 'Mock verification is disabled in production settings.' },
+          { status: 400 }
+        );
+      }
+
       if (order_id.startsWith('cf_reg_')) {
         const { data, error } = await supabaseUserClient.rpc('confirm_registration_payment', {
           p_order_id: order_id,

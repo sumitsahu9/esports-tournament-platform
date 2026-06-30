@@ -14,10 +14,10 @@ export async function POST(request: NextRequest) {
     const appId = process.env.CASHFREE_APP_ID;
     const secretKey = process.env.CASHFREE_SECRET_KEY;
     const isProduction = process.env.CASHFREE_ENV === 'production';
+    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 
-    // Check if credentials are set
-    if (!appId || !secretKey || appId.includes('Dummy') || appId.includes('your_')) {
-      // Return a simulated mock order for developer testing/fallback
+    // Only allow mock checkout if mock mode is explicitly enabled
+    if (useMock) {
       return NextResponse.json({
         cf_order_id: orderId || `cf_mock_${Date.now()}`,
         payment_session_id: `session_mock_${Date.now()}`,
@@ -25,6 +25,13 @@ export async function POST(request: NextRequest) {
         order_currency: 'INR',
         mock: true
       });
+    }
+
+    if (!appId || !secretKey || appId.includes('Dummy') || appId.includes('your_')) {
+      return NextResponse.json(
+        { error: 'Cashfree gateway is not configured on the server. Please add your credentials in the environment settings.' },
+        { status: 500 }
+      );
     }
 
     const cashfreeEndpoint = isProduction 
