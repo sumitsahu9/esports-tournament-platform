@@ -33,6 +33,24 @@ export async function POST(request: NextRequest) {
 
     const finalOrderId = orderId || `order_${Date.now()}`;
 
+    // Clean phone number format for Cashfree validator (must be exactly 10 digits)
+    let cleanPhone = (customerPhone || '9999999999').toString().replace(/\D/g, '');
+    if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+      cleanPhone = cleanPhone.slice(2);
+    }
+    if (cleanPhone.length !== 10) {
+      cleanPhone = '9999999999';
+    }
+
+    // Clean customer ID format (alphanumeric, underscores, hyphens only)
+    const cleanCustomerId = (customerId || 'cust_default').toString().replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    // Force HTTPS on return URL in production mode
+    let finalReturnUrl = returnUrl || 'https://localhost:3000';
+    if (isProduction && finalReturnUrl.startsWith('http://')) {
+      finalReturnUrl = finalReturnUrl.replace('http://', 'https://');
+    }
+
     const response = await fetch(cashfreeEndpoint, {
       method: 'POST',
       headers: {
@@ -46,12 +64,12 @@ export async function POST(request: NextRequest) {
         order_amount: Number(amount),
         order_currency: 'INR',
         customer_details: {
-          customer_id: customerId || 'cust_default',
+          customer_id: cleanCustomerId,
           customer_email: customerEmail || 'customer@example.com',
-          customer_phone: customerPhone || '9999999999'
+          customer_phone: cleanPhone
         },
         order_meta: {
-          return_url: returnUrl
+          return_url: finalReturnUrl
         }
       })
     });

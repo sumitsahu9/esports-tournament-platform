@@ -1409,22 +1409,7 @@ export default function DashboardPage() {
             className="space-y-8"
           >
             {/* Summary statistics cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Card 1: Total Wallet Balance */}
-              <div className="p-5 bg-gradient-to-br from-purple-950/20 to-zinc-900 border border-purple-500/10 rounded-2xl space-y-3 relative overflow-hidden">
-                <div className="flex justify-between items-start">
-                  <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Wallet Balance</div>
-                  <WalletIcon className="w-5 h-5 text-purple-400" />
-                </div>
-                <div className="text-3xl font-black text-white">₹{totalBal.toFixed(2)}</div>
-                <div className="text-[10px] text-zinc-505 flex flex-wrap gap-x-2 gap-y-0.5 font-semibold">
-                  <span>Deposit: ₹{depBal.toFixed(2)}</span>
-                  <span>•</span>
-                  <span>Winnings: ₹{winBal.toFixed(2)}</span>
-                  <span>•</span>
-                  <span>Bonus: ₹{bonusBal.toFixed(2)}</span>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
               {/* Card 2: Total Winnings */}
               <div className="p-5 bg-zinc-900 border border-zinc-850 rounded-2xl space-y-3">
@@ -1511,33 +1496,44 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* Wallet quick balance panel */}
-              <div className="glass-panel border border-zinc-800/80 rounded-2xl p-5 sm:p-6 flex flex-col justify-between">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-zinc-200 flex items-center gap-2">
-                    <WalletIcon className="w-5 h-5 text-purple-400" />
-                    Quick Wallet Action
-                  </h3>
-                  <p className="text-xs text-zinc-400">
-                    Use deposits to join lobbies. Withdrawals are processed instantly to UPI.
+              {/* Request Payout Form */}
+              <div className="p-5 glass-panel border border-zinc-800/80 rounded-2xl space-y-4 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-emerald-400 mb-2">
+                    <Send className="w-5 h-5" />
+                    <h3 className="font-bold text-zinc-200">Request Payout</h3>
+                  </div>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Withdraw funds from your Winnings wallet directly to your UPI ID (Min: ₹100).
                   </p>
                 </div>
-                <div className="mt-8 space-y-3">
+
+                <form onSubmit={handleWithdrawal} className="space-y-3">
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder="Amount (e.g. ₹150)"
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-cyan-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={upiId}
+                    onChange={(e) => setUpiId(e.target.value)}
+                    placeholder="UPI ID (e.g. yourname@ybl)"
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-cyan-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                  />
                   <button
-                    onClick={() => setActiveTab('wallet')}
-                    className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(147,51,234,0.2)]"
+                    type="submit"
+                    disabled={actionLoading}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <Plus className="w-4 h-4" />
-                    Add Mock Deposits
+                    {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Request Payout'}
                   </button>
-                  <button
-                    onClick={() => setActiveTab('wallet')}
-                    className="w-full py-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all"
-                  >
-                    <Send className="w-4 h-4" />
-                    Request Withdrawal
-                  </button>
-                </div>
+                </form>
               </div>
             </div>
           </motion.div>

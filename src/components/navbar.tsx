@@ -118,8 +118,8 @@ export default function Navbar() {
     { name: 'Dashboard', href: '/dashboard' },
   ];
 
-  // Total wallet balance
-  const walletBalance = wallet ? wallet.deposit_balance + wallet.winning_balance : 0;
+  // Total wallet balance (shows winnings only)
+  const walletBalance = wallet ? wallet.winning_balance : 0;
 
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
 
