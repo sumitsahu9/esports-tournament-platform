@@ -89,12 +89,7 @@ export async function POST(request: NextRequest) {
 
 async function processWebhookRegistration(orderId: string, amount: number) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jzrrqkfhzcfyyoreiapa.supabase.co';
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-  if (!supabaseServiceKey) {
-    console.warn('SUPABASE_SERVICE_ROLE_KEY is not defined. Webhook cannot execute auth-bypassed updates.');
-    return;
-  }
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -113,12 +108,7 @@ async function processWebhookRegistration(orderId: string, amount: number) {
 
 async function processWebhookOrder(orderId: string, paymentId: string, amount: number) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jzrrqkfhzcfyyoreiapa.supabase.co';
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-  if (!supabaseServiceKey) {
-    console.warn('SUPABASE_SERVICE_ROLE_KEY is not defined. Webhook cannot execute auth-bypassed updates.');
-    return;
-  }
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 

@@ -841,7 +841,7 @@ export default function TournamentDetailPage() {
         });
         cashfree.checkout({
           paymentSessionId: orderData.payment_session_id,
-          redirectTarget: "_self"
+          returnUrl: `${window.location.origin}/tournaments/${id}?cf_order_id=${orderId}`
         });
       }
     } catch (err: any) {
