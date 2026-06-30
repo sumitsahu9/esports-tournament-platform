@@ -684,7 +684,6 @@ export default function TournamentDetailPage() {
       }
 
 
-
       // Paid checkout flow - create pending registration first
       if (isMockEnabled) {
         const tourneyList = mockDb.getTournaments();
@@ -1246,8 +1245,6 @@ export default function TournamentDetailPage() {
                     </span>
                   )}
                 </div>
-
-
 
                 {/* Direct Payment Checkout Summary */}
                 <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-900 space-y-2">
