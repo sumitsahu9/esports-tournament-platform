@@ -115,6 +115,23 @@ export default function TournamentDetailPage() {
         throw new Error(data.error || 'Failed to verify payment');
       }
 
+      if (isMockEnabled) {
+        const regs = mockDb.getRegistrations();
+        const rIdx = regs.findIndex((r: any) => r.payment_ref === cfOrderId);
+        if (rIdx !== -1) {
+          regs[rIdx].check_in_status = 'Checked In';
+          regs[rIdx].payment_status = 'Paid';
+          mockDb.saveRegistrations(regs);
+        }
+
+        const tourneyList = mockDb.getTournaments();
+        const tIdx = tourneyList.findIndex((t: any) => t.id === id);
+        if (tIdx !== -1) {
+          tourneyList[tIdx].filled_slots += 1;
+          mockDb.saveTournaments(tourneyList);
+        }
+      }
+
       alert('Payment successful! Your registration has been automatically approved.');
       
       // Clean query params from URL
@@ -241,11 +258,18 @@ export default function TournamentDetailPage() {
 
         if (user) {
           const userReg = mappedRegs.find((r: any) => r.user_id === user.id);
-          if (userReg) {
+          if (userReg && (userReg.payment_status === 'Paid' || !userReg.payment_status)) {
             setIsJoined(true);
             setUserRegistration(userReg);
+          } else {
+            setIsJoined(false);
+            setUserRegistration(userReg || null);
           }
         }
+
+        // Only show paid registrations in the public list
+        const paidMappedRegs = mappedRegs.filter((r: any) => r.payment_status === 'Paid' || !r.payment_status);
+        setRegistrations(paidMappedRegs);
 
         // 3. Fetch Room details if joined and published
         if (user && found.room_published) {
@@ -332,16 +356,21 @@ export default function TournamentDetailPage() {
       }
 
       if (!regsError && regsData) {
-        setRegistrations(regsData as any[]);
-        
         // Check if current user is registered
         if (user) {
           const userReg = regsData.find(r => r.user_id === user.id);
-          if (userReg) {
+          if (userReg && (userReg.payment_status === 'Paid' || !userReg.payment_status)) {
             setIsJoined(true);
             setUserRegistration(userReg);
+          } else {
+            setIsJoined(false);
+            setUserRegistration(userReg || null);
           }
         }
+
+        // Only show paid registrations in the public list
+        const paidRegs = (regsData as any[]).filter(r => r.payment_status === 'Paid' || !r.payment_status);
+        setRegistrations(paidRegs);
       }
 
       // 3. Fetch Room details if joined and published
@@ -669,21 +698,31 @@ export default function TournamentDetailPage() {
         }
 
         const allRegs = mockDb.getRegistrations();
-        if (allRegs.some((r: any) => r.tournament_id === id && r.user_id === user.id)) {
-          throw new Error('You are already registered for this tournament');
+        const existingRegIdx = allRegs.findIndex((r: any) => r.tournament_id === id && r.user_id === user.id);
+        if (existingRegIdx !== -1) {
+          const existingReg = allRegs[existingRegIdx];
+          if (existingReg.payment_status === 'Paid' || existingReg.check_in_status === 'Checked In') {
+            throw new Error('You are already registered for this tournament');
+          }
+          // Update credentials and order ID for retry
+          allRegs[existingRegIdx].payment_ref = orderId;
+          allRegs[existingRegIdx].game_id = gameIdInput;
+          allRegs[existingRegIdx].ign = ignInput;
+          allRegs[existingRegIdx].created_at = new Date().toISOString();
+        } else {
+          allRegs.push({
+            id: `reg-${Date.now()}`,
+            tournament_id: id,
+            user_id: user.id,
+            game_id: gameIdInput,
+            ign: ignInput,
+            coupon_discount: discountAmount,
+            check_in_status: 'Pending',
+            payment_status: 'Pending',
+            payment_ref: orderId,
+            created_at: new Date().toISOString()
+          });
         }
-
-        allRegs.push({
-          id: `reg-${Date.now()}`,
-          tournament_id: id,
-          user_id: user.id,
-          game_id: gameIdInput,
-          ign: ignInput,
-          coupon_discount: discountAmount,
-          check_in_status: 'Pending',
-          payment_ref: orderId,
-          created_at: new Date().toISOString()
-        });
         mockDb.saveRegistrations(allRegs);
       } else {
         const { error } = await supabase.rpc('create_pending_registration', {
@@ -742,7 +781,11 @@ export default function TournamentDetailPage() {
         setDiscountAmount(0);
         await fetchAllData();
       } else {
-        const cashfree = await loadCashfree();
+        const CashfreeConstructor = await loadCashfree();
+        const cashfreeEnv = process.env.NEXT_PUBLIC_CASHFREE_ENV === 'production' ? 'production' : 'sandbox';
+        const cashfree = CashfreeConstructor({
+          mode: cashfreeEnv
+        });
         cashfree.checkout({
           paymentSessionId: orderData.payment_session_id,
           redirectTarget: "_self"
