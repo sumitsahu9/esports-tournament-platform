@@ -683,6 +683,59 @@ export default function TournamentDetailPage() {
         return;
       }
 
+      // If custom payment link is active, register via payment link with UTR reference
+      if (tournament?.payment_link) {
+        if (!paymentRefInput || paymentRefInput.length !== 12) {
+          throw new Error('Please enter a valid 12-digit Transaction ID/UTR');
+        }
+
+        if (isMockEnabled) {
+          const allRegs = mockDb.getRegistrations();
+          const existingRegIdx = allRegs.findIndex((r: any) => r.tournament_id === id && r.user_id === user.id);
+          if (existingRegIdx !== -1) {
+            const existingReg = allRegs[existingRegIdx];
+            if (existingReg.payment_status === 'Paid' || existingReg.check_in_status === 'Checked In') {
+              throw new Error('You are already registered for this tournament');
+            }
+            allRegs[existingRegIdx].payment_ref = paymentRefInput;
+            allRegs[existingRegIdx].game_id = gameIdInput;
+            allRegs[existingRegIdx].ign = ignInput;
+            allRegs[existingRegIdx].created_at = new Date().toISOString();
+          } else {
+            allRegs.push({
+              id: `reg-${Date.now()}`,
+              tournament_id: id,
+              user_id: user.id,
+              game_id: gameIdInput,
+              ign: ignInput,
+              coupon_discount: discountAmount,
+              check_in_status: 'Pending',
+              payment_status: 'Pending',
+              payment_ref: paymentRefInput,
+              created_at: new Date().toISOString()
+            });
+          }
+          mockDb.saveRegistrations(allRegs);
+        } else {
+          const { error } = await supabase.rpc('register_via_payment_link', {
+            p_tournament_id: id,
+            p_game_id: gameIdInput,
+            p_ign: ignInput,
+            p_payment_ref: paymentRefInput
+          });
+          if (error) throw error;
+        }
+
+        alert('Registration submitted! Slot is reserved pending admin payment verification.');
+        setShowJoinModal(false);
+        setAppliedCoupon(null);
+        setCouponInput('');
+        setDiscountAmount(0);
+        setPaymentRefInput('');
+        await fetchAllData();
+        return;
+      }
+
       // Paid checkout flow - create pending registration first
       if (isMockEnabled) {
         const tourneyList = mockDb.getTournaments();
@@ -1083,7 +1136,7 @@ export default function TournamentDetailPage() {
                   <Key className="w-4 h-4 text-purple-400" />
                   Room Access Credentials
                 </h4>
-                {tournament.room_published && roomDetails && (userRegistration?.check_in_status === 'Checked In' || userRegistration?.check_in_status === 'Pending' || isMockEnabled) ? (
+                {tournament.room_published && roomDetails && (userRegistration?.check_in_status === 'Checked In' || (userRegistration?.check_in_status === 'Pending' && userRegistration?.payment_status === 'Paid') || isMockEnabled) ? (
                   <div className="space-y-2.5 pt-2">
                     <div className="flex justify-between items-center bg-zinc-900 p-2.5 rounded border border-zinc-800">
                       <span className="text-xs text-zinc-400">Room ID:</span>
@@ -1244,6 +1297,43 @@ export default function TournamentDetailPage() {
                     </span>
                   )}
                 </div>
+
+                {tournament?.payment_link && (
+                  <>
+                    <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/80 space-y-3">
+                      <h4 className="text-xs font-black uppercase text-purple-400 tracking-wider">
+                        Custom Payment Gateway Link
+                      </h4>
+                      <p className="text-[11px] text-zinc-400 leading-relaxed">
+                        Please pay the entry fee of <strong>₹{Math.max(0, tournament.entry_fee - discountAmount)}</strong> via the link below, then return here and input your 12-digit payment Reference ID/UTR to register.
+                      </p>
+                      <a
+                        href={tournament.payment_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-all shadow-[0_0_10px_rgba(147,51,234,0.2)] flex justify-center items-center gap-1.5 text-center"
+                      >
+                        Pay Entry Fee via Link (New Tab)
+                      </a>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                        Transaction ID / UTR (12-Digits)
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={12}
+                        pattern="\d{12}"
+                        value={paymentRefInput}
+                        onChange={(e) => setPaymentRefInput(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Enter 12-digit UTR number"
+                        className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Direct Payment Checkout Summary */}
                 <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-900 space-y-2">
