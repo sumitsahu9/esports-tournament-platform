@@ -95,34 +95,34 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (order_id.startsWith('cf_reg_') || order_id.startsWith('pending_link_') || order_id.includes('_link_') || order_id.startsWith('pay_') || order_id.startsWith('order_') || order_id.match(/^\d+$/)) {
-      const { data, error } = await supabaseUserClient.rpc('confirm_registration_payment', {
-        p_order_id: order_id,
-        p_amount: Number(cfOrder.order_amount),
-        p_user_id: cfOrder.customer_details?.customer_id || null
-      });
+    // 1. Try to confirm registration payment first
+    const { data: regData, error: regError } = await supabaseUserClient.rpc('confirm_registration_payment', {
+      p_order_id: order_id,
+      p_amount: Number(cfOrder.order_amount),
+      p_user_id: cfOrder.customer_details?.customer_id || null
+    });
 
-      if (error) {
-        console.error('Error confirming registration in DB:', error);
-        throw error;
-      }
-
-      return NextResponse.json({ success: true, message: 'Registration payment verified successfully', data });
+    if (regError) {
+      console.error('Error calling confirm_registration_payment in DB:', regError);
     }
 
-    // Atomically execute SQL RPC function to credit wallet balance and log transaction ledger
-    const { data, error } = await supabaseUserClient.rpc('confirm_deposit', {
+    if (!regError && regData && (regData as any).success !== false) {
+      return NextResponse.json({ success: true, message: 'Registration payment verified successfully', data: regData });
+    }
+
+    // 2. Fallback to wallet deposit confirmation
+    const { data: depData, error: depError } = await supabaseUserClient.rpc('confirm_deposit', {
       p_order_id: order_id,
       p_payment_id: `cf_pay_${order_id}`,
       p_amount: Number(cfOrder.order_amount)
     });
 
-    if (error) {
-      console.error('Error confirming deposit in DB:', error);
-      throw error;
+    if (depError) {
+      console.error('Error confirming deposit in DB:', depError);
+      throw depError;
     }
 
-    return NextResponse.json({ success: true, message: 'Payment verified and credited successfully', data });
+    return NextResponse.json({ success: true, message: 'Payment verified and credited successfully', data: depData });
   } catch (err: any) {
     console.error('Error verifying Cashfree order:', err);
     return NextResponse.json(

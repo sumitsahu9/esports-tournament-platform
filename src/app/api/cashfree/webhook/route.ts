@@ -56,13 +56,27 @@ export async function POST(request: NextRequest) {
 
     if (cfOrder.order_status === 'PAID') {
       const paymentId = payload.data?.payment?.cf_payment_id?.toString() || `cf_pay_${orderId}`;
-      if (orderId.startsWith('cf_reg_') || orderId.startsWith('pending_link_') || orderId.includes('_link_') || orderId.startsWith('pay_') || orderId.startsWith('order_') || orderId.match(/^\d+$/)) {
+
+      // Initialize Supabase Admin client
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jzrrqkfhzcfyyoreiapa.supabase.co';
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+      // Check if this order_id belongs to a deposit transaction
+      const { data: depositData } = await supabaseAdmin
+        .from('deposits')
+        .select('id')
+        .eq('razorpay_order_id', orderId)
+        .maybeSingle();
+
+      if (depositData) {
+        await processWebhookOrder(orderId, paymentId, Number(cfOrder.order_amount));
+        return NextResponse.json({ success: true, message: 'Deposit processed successfully via webhook' });
+      } else {
         const userId = payload.data?.customer_details?.customer_id || null;
         await processWebhookRegistration(orderId, Number(cfOrder.order_amount), userId);
         return NextResponse.json({ success: true, message: 'Registration processed successfully via webhook' });
       }
-      await processWebhookOrder(orderId, paymentId, Number(cfOrder.order_amount));
-      return NextResponse.json({ success: true, message: 'Deposit processed successfully via webhook' });
     } else {
       console.log(`Order status for ${orderId} is ${cfOrder.order_status}. Webhook ignored.`);
       // If payment failed, update status in DB
