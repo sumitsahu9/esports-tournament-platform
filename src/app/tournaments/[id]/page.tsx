@@ -148,7 +148,7 @@ export default function TournamentDetailPage() {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const cfOrderId = urlParams.get('cf_order_id');
+    const cfOrderId = urlParams.get('cf_order_id') || urlParams.get('order_id');
     if (cfOrderId && user) {
       verifyCheckoutOrder(cfOrderId);
     }
@@ -733,6 +733,12 @@ export default function TournamentDetailPage() {
           p_order_id: orderId
         });
         if (error) throw error;
+      }
+
+      if (tournament?.payment_link) {
+        window.location.href = tournament.payment_link;
+        setShowJoinModal(false);
+        return;
       }
 
       // Call Cashfree order API to generate session ID

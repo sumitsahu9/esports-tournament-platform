@@ -95,10 +95,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (order_id.startsWith('cf_reg_')) {
+    if (order_id.startsWith('cf_reg_') || order_id.startsWith('pending_link_') || order_id.includes('_link_') || order_id.startsWith('pay_') || order_id.startsWith('order_') || order_id.match(/^\d+$/)) {
       const { data, error } = await supabaseUserClient.rpc('confirm_registration_payment', {
         p_order_id: order_id,
-        p_amount: Number(cfOrder.order_amount)
+        p_amount: Number(cfOrder.order_amount),
+        p_user_id: cfOrder.customer_details?.customer_id || null
       });
 
       if (error) {

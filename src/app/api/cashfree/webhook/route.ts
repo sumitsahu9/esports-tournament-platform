@@ -56,8 +56,9 @@ export async function POST(request: NextRequest) {
 
     if (cfOrder.order_status === 'PAID') {
       const paymentId = payload.data?.payment?.cf_payment_id?.toString() || `cf_pay_${orderId}`;
-      if (orderId.startsWith('cf_reg_')) {
-        await processWebhookRegistration(orderId, Number(cfOrder.order_amount));
+      if (orderId.startsWith('cf_reg_') || orderId.startsWith('pending_link_') || orderId.includes('_link_') || orderId.startsWith('pay_') || orderId.startsWith('order_') || orderId.match(/^\d+$/)) {
+        const userId = payload.data?.customer_details?.customer_id || null;
+        await processWebhookRegistration(orderId, Number(cfOrder.order_amount), userId);
         return NextResponse.json({ success: true, message: 'Registration processed successfully via webhook' });
       }
       await processWebhookOrder(orderId, paymentId, Number(cfOrder.order_amount));
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function processWebhookRegistration(orderId: string, amount: number) {
+async function processWebhookRegistration(orderId: string, amount: number, userId: string | null = null) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jzrrqkfhzcfyyoreiapa.supabase.co';
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
@@ -95,7 +96,8 @@ async function processWebhookRegistration(orderId: string, amount: number) {
 
   const { data, error } = await supabaseAdmin.rpc('confirm_registration_payment', {
     p_order_id: orderId,
-    p_amount: amount
+    p_amount: amount,
+    p_user_id: userId
   });
 
   if (error) {
