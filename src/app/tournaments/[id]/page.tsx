@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, Calendar, Users, Award, ShieldAlert,
   Loader2, CheckCircle2, Key, Info, Gamepad2, ArrowLeft,
-  Camera, Upload, ExternalLink, Tag, Play
+  Camera, Upload, ExternalLink, Tag, Play, AlertTriangle
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -68,6 +68,15 @@ export default function TournamentDetailPage() {
   const [ignInput, setIgnInput] = useState('');
   const [paymentRefInput, setPaymentRefInput] = useState('');
   const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [manualOrderIdInput, setManualOrderIdInput] = useState('');
+
+  const handleManualVerify = async (orderId: string) => {
+    if (!orderId) {
+      alert('Please enter a valid Cashfree Order ID or Payment ID.');
+      return;
+    }
+    await verifyCheckoutOrder(orderId);
+  };
 
   // Load Cashfree checkout SDK dynamically
   useEffect(() => {
@@ -1119,6 +1128,47 @@ export default function TournamentDetailPage() {
                 )}
               </div>
             </div>
+          ) : userRegistration && !isJoined ? (
+            /* Pending Verification Card */
+            <div className="glass-panel border border-yellow-500/30 rounded-2xl p-6 space-y-5">
+              <div className="flex items-center gap-2 text-yellow-400">
+                <AlertTriangle className="w-6 h-6" />
+                <h3 className="text-lg font-bold">Payment Pending</h3>
+              </div>
+
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                We are waiting for payment confirmation from Cashfree. If your payment was successful but your slot is not booked yet, enter your Cashfree Order ID or Payment ID from your receipt below to instantly verify and claim your slot.
+              </p>
+
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="e.g. order_1234567 or cf_pay_12345"
+                  value={manualOrderIdInput}
+                  onChange={(e) => setManualOrderIdInput(e.target.value.trim())}
+                  className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-yellow-500/50 focus:outline-none text-xs text-zinc-100 transition-colors"
+                />
+                <button
+                  onClick={() => handleManualVerify(manualOrderIdInput)}
+                  disabled={verifyingPayment}
+                  className="w-full py-2.5 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded-lg text-xs transition-all shadow-[0_0_10px_rgba(234,179,8,0.2)] flex justify-center items-center gap-1.5 cursor-pointer"
+                >
+                  {verifyingPayment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Verify Payment Status'}
+                </button>
+              </div>
+
+              <div className="border-t border-zinc-900 pt-4 space-y-3">
+                <p className="text-[10px] text-zinc-500 text-center">
+                  If your previous payment attempt failed or was cancelled, click below to try paying again.
+                </p>
+                <button
+                  onClick={() => setShowJoinModal(true)}
+                  className="w-full py-2 bg-zinc-900 hover:bg-zinc-855 text-zinc-300 rounded-lg text-xs font-semibold border border-zinc-800 transition-all text-center cursor-pointer"
+                >
+                  Retry Payment & Book Slot
+                </button>
+              </div>
+            </div>
           ) : (
             /* Join lobby Card */
             <div className="glass-panel border border-zinc-800/80 rounded-2xl p-6 space-y-6">
@@ -1154,7 +1204,7 @@ export default function TournamentDetailPage() {
                 <button
                   onClick={() => setShowJoinModal(true)}
                   disabled={tournament.filled_slots >= tournament.total_slots}
-                  className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-zinc-800 disabled:to-zinc-800 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(147,51,234,0.3)] text-sm flex items-center justify-center"
+                  className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-zinc-800 disabled:to-zinc-800 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(147,51,234,0.3)] text-sm flex items-center justify-center cursor-pointer"
                 >
                   {tournament.filled_slots >= tournament.total_slots ? 'Lobby Full' : 'Book Your Slot'}
                 </button>
