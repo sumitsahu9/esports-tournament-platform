@@ -1109,13 +1109,6 @@ export default function TournamentDetailPage() {
                       <span className="text-xs text-zinc-400">Password:</span>
                       <span className="text-sm font-mono font-bold text-white selection:bg-purple-600 select-all">{roomDetails.room_password}</span>
                     </div>
-                    <button
-                      onClick={() => handleStartGame(tournament.game)}
-                      className="w-full mt-2.5 py-2.5 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 text-zinc-100 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-[0_0_10px_rgba(147,51,234,0.3)] border border-purple-500/25 active:scale-95 cursor-pointer"
-                    >
-                      <Play className="w-4 h-4 fill-current text-white" />
-                      Start Game ({tournament.game})
-                    </button>
                   </div>
                 ) : !tournament.room_published ? (
                   <p className="text-xs text-zinc-500 leading-relaxed pt-1">
