@@ -147,6 +147,9 @@ export default function AdminPanelPage() {
   const [winner1, setWinner1] = useState('');
   const [winner2, setWinner2] = useState('');
   const [winner3, setWinner3] = useState('');
+  const [rank1PrizeInput, setRank1PrizeInput] = useState('');
+  const [rank2PrizeInput, setRank2PrizeInput] = useState('');
+  const [rank3PrizeInput, setRank3PrizeInput] = useState('');
 
   // Tournament Edit Form states
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
@@ -1273,6 +1276,28 @@ export default function AdminPanelPage() {
     fetchRegs();
   }, [selectedTourneyId, tournaments]);
 
+  // Pre-fill custom prize inputs when selected tournament changes
+  useEffect(() => {
+    if (!selectedTourneyId) {
+      setRank1PrizeInput('');
+      setRank2PrizeInput('');
+      setRank3PrizeInput('');
+      return;
+    }
+    const tourney = tournaments.find(t => t.id === selectedTourneyId);
+    if (tourney) {
+      const entryFee = Number(tourney.entry_fee) || 0;
+      const filledSlots = Number(tourney.filled_slots) || 0;
+      const prizePool = entryFee > 0 
+        ? (entryFee * filledSlots * 0.50) 
+        : (Number(tourney.prize_pool) || 0);
+
+      setRank1PrizeInput((prizePool * 0.50).toFixed(2));
+      setRank2PrizeInput((prizePool * 0.30).toFixed(2));
+      setRank3PrizeInput((prizePool * 0.20).toFixed(2));
+    }
+  }, [selectedTourneyId, tournaments]);
+
   // Tab visibility guarantor based on RBAC roles
   useEffect(() => {
     const visible = getVisibleTabs();
@@ -2072,15 +2097,10 @@ export default function AdminPanelPage() {
           throw new Error('Results have already been published for this tournament');
         }
 
-        // Calculate pool (50% entry fee pool)
-        const entryFee = Number(tourney.entry_fee) || 0;
-        const prizePool = entryFee > 0 
-          ? (entryFee * tourney.filled_slots * 0.50) 
-          : (Number(tourney.prize_pool) || 0);
-
-        const p1 = 0.50 * prizePool; // Rank 1 = 50%
-        const p2 = 0.30 * prizePool; // Rank 2 = 30%
-        const p3 = 0.20 * prizePool; // Rank 3 = 20%
+        // Read custom prize pools or calculate fallback
+        const p1 = rank1PrizeInput ? Number(rank1PrizeInput) : 0;
+        const p2 = rank2PrizeInput ? Number(rank2PrizeInput) : 0;
+        const p3 = rank3PrizeInput ? Number(rank3PrizeInput) : 0;
 
         const walletsMap = mockDb.getWallets();
         const txs = mockDb.getTransactions();
@@ -2137,16 +2157,26 @@ export default function AdminPanelPage() {
         setWinner1('');
         setWinner2('');
         setWinner3('');
+        setRank1PrizeInput('');
+        setRank2PrizeInput('');
+        setRank3PrizeInput('');
         setSelectedTourneyId('');
         await fetchData();
         return;
       }
 
+      const p1 = rank1PrizeInput ? Number(rank1PrizeInput) : null;
+      const p2 = rank2PrizeInput ? Number(rank2PrizeInput) : null;
+      const p3 = rank3PrizeInput ? Number(rank3PrizeInput) : null;
+
       const { data, error } = await supabase.rpc('publish_tournament_results', {
         p_tournament_id: selectedTourneyId,
         p_rank1_user_id: winner1 || null,
         p_rank2_user_id: winner2 || null,
-        p_rank3_user_id: winner3 || null
+        p_rank3_user_id: winner3 || null,
+        p_rank1_prize: p1,
+        p_rank2_prize: p2,
+        p_rank3_prize: p3
       });
 
       if (error) throw error;
@@ -2155,6 +2185,9 @@ export default function AdminPanelPage() {
       setWinner1('');
       setWinner2('');
       setWinner3('');
+      setRank1PrizeInput('');
+      setRank2PrizeInput('');
+      setRank3PrizeInput('');
       setSelectedTourneyId('');
       await fetchData();
     } catch (err: any) {
@@ -2842,7 +2875,7 @@ export default function AdminPanelPage() {
                           })()}
 
                           {/* Rank 1 Selection */}
-                          <div className="space-y-1">
+                          <div className="space-y-1 p-3 bg-zinc-950/40 border border-zinc-900 rounded-xl">
                             <label className="text-xs font-bold text-emerald-400 uppercase tracking-wider">🏆 Rank 1 Winner (50%)</label>
                             <select
                               value={winner1}
@@ -2858,10 +2891,23 @@ export default function AdminPanelPage() {
                                   </option>
                                 ))}
                             </select>
+                            {winner1 && (
+                              <div className="space-y-1.5 mt-2">
+                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Rank 1 Prize Money (₹)</label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  required
+                                  value={rank1PrizeInput}
+                                  onChange={(e) => setRank1PrizeInput(e.target.value)}
+                                  className="w-full px-3 py-1.5 bg-zinc-950 border border-zinc-850 rounded-lg text-xs text-zinc-200"
+                                />
+                              </div>
+                            )}
                           </div>
 
                           {/* Rank 2 Selection */}
-                          <div className="space-y-1">
+                          <div className="space-y-1 p-3 bg-zinc-950/40 border border-zinc-900 rounded-xl">
                             <label className="text-xs font-bold text-cyan-400 uppercase tracking-wider">🥈 Rank 2 Winner (30%)</label>
                             <select
                               value={winner2}
@@ -2877,10 +2923,23 @@ export default function AdminPanelPage() {
                                   </option>
                                 ))}
                             </select>
+                            {winner2 && (
+                              <div className="space-y-1.5 mt-2">
+                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Rank 2 Prize Money (₹)</label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  required
+                                  value={rank2PrizeInput}
+                                  onChange={(e) => setRank2PrizeInput(e.target.value)}
+                                  className="w-full px-3 py-1.5 bg-zinc-950 border border-zinc-850 rounded-lg text-xs text-zinc-200"
+                                />
+                              </div>
+                            )}
                           </div>
 
                           {/* Rank 3 Selection */}
-                          <div className="space-y-1">
+                          <div className="space-y-1 p-3 bg-zinc-950/40 border border-zinc-900 rounded-xl">
                             <label className="text-xs font-bold text-amber-500 uppercase tracking-wider">🥉 Rank 3 Winner (20%)</label>
                             <select
                               value={winner3}
@@ -2896,6 +2955,19 @@ export default function AdminPanelPage() {
                                   </option>
                                 ))}
                             </select>
+                            {winner3 && (
+                              <div className="space-y-1.5 mt-2">
+                                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Rank 3 Prize Money (₹)</label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  required
+                                  value={rank3PrizeInput}
+                                  onChange={(e) => setRank3PrizeInput(e.target.value)}
+                                  className="w-full px-3 py-1.5 bg-zinc-950 border border-zinc-850 rounded-lg text-xs text-zinc-200"
+                                />
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex justify-end pt-4">
