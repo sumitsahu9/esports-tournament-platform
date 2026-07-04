@@ -80,16 +80,23 @@ export async function POST(request: NextRequest) {
     } else {
       console.log(`Order status for ${orderId} is ${cfOrder.order_status}. Webhook ignored.`);
       // If payment failed, update status in DB
-      if (cfOrder.order_status === 'FAILED') {
+      if (cfOrder.order_status === 'FAILED' || cfOrder.order_status === 'CANCELLED' || cfOrder.order_status === 'USER_DROPPED') {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jzrrqkfhzcfyyoreiapa.supabase.co';
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-        if (supabaseServiceKey) {
-          const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-          await supabaseAdmin
-            .from('deposits')
-            .update({ status: 'Failed' })
-            .eq('razorpay_order_id', orderId);
-        }
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+        // 1. Try to reject registration if it exists
+        const userId = payload.data?.customer_details?.customer_id || null;
+        await supabaseAdmin.rpc('reject_registration_payment', {
+          p_order_id: orderId,
+          p_user_id: userId
+        });
+
+        // 2. Reject deposit if it was a wallet deposit
+        await supabaseAdmin
+          .from('deposits')
+          .update({ status: 'Failed' })
+          .eq('razorpay_order_id', orderId);
       }
       return NextResponse.json({ success: true, message: `Status is ${cfOrder.order_status}` });
     }

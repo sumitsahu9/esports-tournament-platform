@@ -88,6 +88,17 @@ export async function POST(request: NextRequest) {
     const cfOrder = await response.json();
 
     if (cfOrder.order_status !== 'PAID') {
+      // If payment failed or cancelled, reject the registration in the DB
+      if (cfOrder.order_status === 'FAILED' || cfOrder.order_status === 'CANCELLED' || cfOrder.order_status === 'USER_DROPPED') {
+        const { error: rejectError } = await supabaseUserClient.rpc('reject_registration_payment', {
+          p_order_id: order_id,
+          p_user_id: cfOrder.customer_details?.customer_id || null
+        });
+        if (rejectError) {
+          console.error('Error rejecting registration in DB via verify API:', rejectError);
+        }
+      }
+
       return NextResponse.json({ 
         success: false, 
         message: `Payment is not completed. Current status: ${cfOrder.order_status}`,
