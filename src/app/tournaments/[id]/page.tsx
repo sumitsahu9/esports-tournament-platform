@@ -1292,38 +1292,41 @@ export default function TournamentDetailPage() {
               )}
 
               <form onSubmit={handleJoinTournament} className="space-y-4">
-                {/* Leader/Player IGN */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    {tournament.mode === 'Solo' ? 'In Game Name (IGN)' : 'Leader In Game Name (IGN)'}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={ignInput}
-                    onChange={(e) => setIgnInput(e.target.value)}
-                    placeholder="e.g. 〆MASH・RAPTOR"
-                    className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
-                  />
-                </div>
+                {/* Leader/Player IGN and UID in one line */}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Leader/Player IGN */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                      {tournament.mode === 'Solo' ? 'IGN' : 'Leader IGN'}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={ignInput}
+                      onChange={(e) => setIgnInput(e.target.value)}
+                      placeholder="e.g. 〆MASH・RAPTOR"
+                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                    />
+                  </div>
 
-                {/* Leader/Player UID */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    {tournament.mode === 'Solo' ? (isBGMI ? 'BGMI UID' : 'Free Fire UID') : (isBGMI ? 'Leader BGMI UID (Optional)' : 'Leader Free Fire UID (Optional)')}
-                  </label>
-                  <input
-                    type="text"
-                    required={tournament.mode === 'Solo'}
-                    value={gameIdInput}
-                    onChange={(e) => setGameIdInput(e.target.value)}
-                    placeholder={isBGMI ? 'e.g. 5124792341' : 'e.g. 84291845'}
-                    className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
-                  />
+                  {/* Leader/Player UID */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider text-ellipsis overflow-hidden whitespace-nowrap block">
+                      {tournament.mode === 'Solo' ? (isBGMI ? 'BGMI UID' : 'Free Fire UID') : 'UID (Optional)'}
+                    </label>
+                    <input
+                      type="text"
+                      required={tournament.mode === 'Solo'}
+                      value={gameIdInput}
+                      onChange={(e) => setGameIdInput(e.target.value)}
+                      placeholder={isBGMI ? 'e.g. 5124792341' : 'e.g. 84291845'}
+                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                    />
+                  </div>
                 </div>
 
                 {/* Duo / Squad extra members */}
-                {(tournament.mode === 'Squad' || tournament.mode === 'Duo') && (
+                {tournament.mode === 'Duo' && (
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
                       Member 2 In Game Name (IGN)
@@ -1341,18 +1344,33 @@ export default function TournamentDetailPage() {
 
                 {tournament.mode === 'Squad' && (
                   <>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                        Member 3 In Game Name (IGN)
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={member3Input}
-                        onChange={(e) => setMember3Input(e.target.value)}
-                        placeholder="e.g. 〆MASH・SHADOW"
-                        className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-850 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider text-ellipsis overflow-hidden whitespace-nowrap block">
+                          Member 2 IGN
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={member2Input}
+                          onChange={(e) => setMember2Input(e.target.value)}
+                          placeholder="e.g. 〆MASH・VIPER"
+                          className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider text-ellipsis overflow-hidden whitespace-nowrap block">
+                          Member 3 IGN
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={member3Input}
+                          onChange={(e) => setMember3Input(e.target.value)}
+                          placeholder="e.g. 〆MASH・SHADOW"
+                          className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-850 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                        />
+                      </div>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
