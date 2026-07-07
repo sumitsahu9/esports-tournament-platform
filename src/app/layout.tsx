@@ -4,6 +4,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 import AnnouncementBanner from '@/components/announcement-banner';
+import WhatsappSupport from '@/components/whatsapp-support';
 
 const outfit = { variable: 'font-outfit' };
 const inter = { variable: 'font-inter' };
@@ -83,6 +84,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <WhatsappSupport />
         </AuthProvider>
       </body>
     </html>
