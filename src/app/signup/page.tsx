@@ -214,7 +214,7 @@ export default function SignupPage() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Enter full name"
-                        className="w-full pl-11 pr-4 py-3 bg-zinc-950/70 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                        className="w-full pl-11 pr-4 py-3 bg-zinc-950/70 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-base sm:text-sm text-zinc-100 transition-colors"
                       />
                     </div>
                   </div>
@@ -230,7 +230,7 @@ export default function SignupPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="Enter email address"
-                        className="w-full pl-11 pr-4 py-3 bg-zinc-950/70 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                        className="w-full pl-11 pr-4 py-3 bg-zinc-950/70 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-base sm:text-sm text-zinc-100 transition-colors"
                       />
                     </div>
                   </div>
@@ -246,7 +246,7 @@ export default function SignupPage() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Create password (min 6 chars)"
-                        className="w-full pl-11 pr-4 py-3 bg-zinc-950/70 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                        className="w-full pl-11 pr-4 py-3 bg-zinc-950/70 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-base sm:text-sm text-zinc-100 transition-colors"
                       />
                     </div>
                   </div>
@@ -262,7 +262,7 @@ export default function SignupPage() {
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="Enter 10-digit WhatsApp number"
-                        className="w-full pl-11 pr-4 py-3 bg-zinc-950/70 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                        className="w-full pl-11 pr-4 py-3 bg-zinc-950/70 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-base sm:text-sm text-zinc-100 transition-colors"
                       />
                     </div>
                   </div>

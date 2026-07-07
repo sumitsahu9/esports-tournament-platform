@@ -1305,7 +1305,7 @@ export default function TournamentDetailPage() {
                       value={ignInput}
                       onChange={(e) => setIgnInput(e.target.value)}
                       placeholder="e.g. 〆MASH・RAPTOR"
-                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-base sm:text-sm text-zinc-100 transition-colors"
                     />
                   </div>
 
@@ -1320,7 +1320,7 @@ export default function TournamentDetailPage() {
                       value={gameIdInput}
                       onChange={(e) => setGameIdInput(e.target.value)}
                       placeholder={isBGMI ? 'e.g. 5124792341' : 'e.g. 84291845'}
-                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-base sm:text-sm text-zinc-100 transition-colors"
                     />
                   </div>
                 </div>
@@ -1337,7 +1337,7 @@ export default function TournamentDetailPage() {
                       value={member2Input}
                       onChange={(e) => setMember2Input(e.target.value)}
                       placeholder="e.g. 〆MASH・VIPER"
-                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-base sm:text-sm text-zinc-100 transition-colors"
                     />
                   </div>
                 )}
@@ -1355,7 +1355,7 @@ export default function TournamentDetailPage() {
                           value={member2Input}
                           onChange={(e) => setMember2Input(e.target.value)}
                           placeholder="e.g. 〆MASH・VIPER"
-                          className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                          className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-base sm:text-sm text-zinc-100 transition-colors"
                         />
                       </div>
                       <div className="space-y-1">
@@ -1368,7 +1368,7 @@ export default function TournamentDetailPage() {
                           value={member3Input}
                           onChange={(e) => setMember3Input(e.target.value)}
                           placeholder="e.g. 〆MASH・SHADOW"
-                          className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-850 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                          className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-850 rounded-lg focus:border-purple-500/50 focus:outline-none text-base sm:text-sm text-zinc-100 transition-colors"
                         />
                       </div>
                     </div>
@@ -1382,7 +1382,7 @@ export default function TournamentDetailPage() {
                         value={member4Input}
                         onChange={(e) => setMember4Input(e.target.value)}
                         placeholder="e.g. 〆MASH・GHOST"
-                        className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-850 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                        className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-855 rounded-lg focus:border-purple-500/50 focus:outline-none text-base sm:text-sm text-zinc-100 transition-colors"
                       />
                     </div>
                   </>
@@ -1399,7 +1399,7 @@ export default function TournamentDetailPage() {
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value)}
                       placeholder="e.g. MASH50"
-                      className="flex-grow px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-xs text-zinc-100 transition-colors uppercase"
+                      className="flex-grow px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-base sm:text-xs text-zinc-100 transition-colors uppercase"
                     />
                     <button
                       type="button"

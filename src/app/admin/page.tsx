@@ -3096,7 +3096,7 @@ export default function AdminPanelPage() {
                   </div>
 
                   {/* Table list */}
-                  <div className="max-h-[350px] overflow-y-auto border border-zinc-900 rounded-xl bg-zinc-950/20">
+                  <div className="max-h-[350px] overflow-auto border border-zinc-900 rounded-xl bg-zinc-950/20">
                     {regsForSelectedTourney.filter(r => {
                       if (checkInFilter === 'All') return true;
                       if (checkInFilter === 'Pending') return !r.check_in_status || r.check_in_status === 'Pending';
