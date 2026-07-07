@@ -3111,7 +3111,7 @@ export default function AdminPanelPage() {
                           <tr className="border-b border-zinc-900 text-zinc-550 font-bold uppercase bg-zinc-950/40">
                             <th className="p-3">Player Details</th>
                             <th className="p-3">In-Game IGN</th>
-                            <th className="p-3">Payment Info & Actions</th>
+                            <th className="p-3">Phone Number</th>
                             <th className="p-3 text-center">Check-In Status</th>
                             <th className="p-3 text-center">Action</th>
                           </tr>
@@ -3130,11 +3130,6 @@ export default function AdminPanelPage() {
                                     {r.profiles.email}
                                   </div>
                                 )}
-                                {r.profiles?.phone_number && (
-                                  <div className="text-[10px] text-zinc-500 font-sans select-all selection:bg-purple-600">
-                                    {r.profiles.phone_number}
-                                  </div>
-                                )}
                               </td>
                               <td className="p-3 font-mono">
                                 <div>{r.ign} <span className="text-[10px] text-zinc-500 font-sans">(Leader)</span></div>
@@ -3147,74 +3142,82 @@ export default function AdminPanelPage() {
                                 )}
                               </td>
                               <td className="p-3">
-                                {r.payment_status === 'Paid' ? (
-                                  <div className="space-y-0.5">
-                                    <span className="text-emerald-400 font-bold text-xs flex items-center gap-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Verified Paid
-                                    </span>
-                                    <div className="text-[10px] text-zinc-500 font-mono select-all selection:bg-purple-600">{r.payment_ref}</div>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-2 max-w-[200px]">
-                                    <div className="text-yellow-500 font-bold text-xs flex items-center gap-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span> Unpaid/Pending
+                                <div className="space-y-1.5 max-w-[200px]">
+                                  {r.profiles?.phone_number ? (
+                                    <div className="font-mono text-zinc-200 font-bold text-sm select-all selection:bg-purple-600">
+                                      {r.profiles.phone_number}
                                     </div>
-                                    <div className="text-[9px] text-zinc-550 font-mono select-all">Ref: {r.payment_ref || 'None'}</div>
-                                    <div className="flex gap-1.5 items-center">
-                                      <input
-                                        type="text"
-                                        id={`approve-ref-${r.id}`}
-                                        placeholder="e.g. CFPay_123 or Tx ID"
-                                        className="w-full px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-[10px] text-zinc-200 focus:outline-none focus:border-cyan-500"
-                                      />
-                                      <button
-                                        onClick={async () => {
-                                          const inputEl = document.getElementById(`approve-ref-${r.id}`) as HTMLInputElement;
-                                          const refId = inputEl?.value?.trim() || r.payment_ref || '';
-                                          if (!confirm(`Are you sure you want to force approve this registration using reference ID "${refId}"?`)) return;
-                                          try {
-                                            setBtnLoading(true);
-                                            if (isMockEnabled) {
-                                              const allRegs = mockDb.getRegistrations();
-                                              const rIdx = allRegs.findIndex((x: any) => x.id === r.id);
-                                              if (rIdx !== -1) {
-                                                allRegs[rIdx].payment_status = 'Paid';
-                                                allRegs[rIdx].check_in_status = 'Checked In';
-                                                allRegs[rIdx].payment_ref = refId;
-                                                mockDb.saveRegistrations(allRegs);
-                                                const tourneyList = mockDb.getTournaments();
-                                                const tIdx = tourneyList.findIndex((t: any) => t.id === r.tournament_id);
-                                                if (tIdx !== -1) {
-                                                  tourneyList[tIdx].filled_slots += 1;
-                                                  mockDb.saveTournaments(tourneyList);
+                                  ) : (
+                                    <div className="text-xs text-zinc-500 italic">No Phone Number</div>
+                                  )}
+
+                                  {r.payment_status === 'Paid' ? (
+                                    <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1.5">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Verified Paid
+                                      <span className="text-[8px] text-zinc-500 font-mono select-all">({r.payment_ref})</span>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1.5 pt-1.5 border-t border-zinc-900/60 mt-1">
+                                      <div className="text-yellow-500 font-bold text-[10px] flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span> Unpaid/Pending
+                                      </div>
+                                      <div className="text-[8px] text-zinc-550 font-mono select-all">Ref: {r.payment_ref || 'None'}</div>
+                                      <div className="flex gap-1 items-center">
+                                        <input
+                                          type="text"
+                                          id={`approve-ref-${r.id}`}
+                                          placeholder="e.g. CFPay_123 or Tx ID"
+                                          className="w-full px-2 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-[9px] text-zinc-200 focus:outline-none focus:border-cyan-500"
+                                        />
+                                        <button
+                                          onClick={async () => {
+                                            const inputEl = document.getElementById(`approve-ref-${r.id}`) as HTMLInputElement;
+                                            const refId = inputEl?.value?.trim() || r.payment_ref || '';
+                                            if (!confirm(`Are you sure you want to force approve this registration using reference ID "${refId}"?`)) return;
+                                            try {
+                                              setBtnLoading(true);
+                                              if (isMockEnabled) {
+                                                const allRegs = mockDb.getRegistrations();
+                                                const rIdx = allRegs.findIndex((x: any) => x.id === r.id);
+                                                if (rIdx !== -1) {
+                                                  allRegs[rIdx].payment_status = 'Paid';
+                                                  allRegs[rIdx].check_in_status = 'Checked In';
+                                                  allRegs[rIdx].payment_ref = refId;
+                                                  mockDb.saveRegistrations(allRegs);
+                                                  const tourneyList = mockDb.getTournaments();
+                                                  const tIdx = tourneyList.findIndex((t: any) => t.id === r.tournament_id);
+                                                  if (tIdx !== -1) {
+                                                    tourneyList[tIdx].filled_slots += 1;
+                                                    mockDb.saveTournaments(tourneyList);
+                                                  }
+                                                }
+                                              } else {
+                                                const { data, error } = await supabase.rpc('confirm_registration_payment', {
+                                                  p_order_id: refId,
+                                                  p_amount: 1.00,
+                                                  p_user_id: r.user_id
+                                                });
+                                                if (error) throw error;
+                                                if (data && (data as any).success === false) {
+                                                  throw new Error((data as any).message || 'Verification failed');
                                                 }
                                               }
-                                            } else {
-                                              const { data, error } = await supabase.rpc('confirm_registration_payment', {
-                                                p_order_id: refId,
-                                                p_amount: 1.00,
-                                                p_user_id: r.user_id
-                                              });
-                                              if (error) throw error;
-                                              if (data && (data as any).success === false) {
-                                                throw new Error((data as any).message || 'Verification failed');
-                                              }
+                                              alert('Registration payment approved and slot filled successfully!');
+                                              await fetchData();
+                                            } catch (err: any) {
+                                              alert(err.message || 'Failed to approve payment');
+                                            } finally {
+                                              setBtnLoading(false);
                                             }
-                                            alert('Registration payment approved and slot filled successfully!');
-                                            await fetchData();
-                                          } catch (err: any) {
-                                            alert(err.message || 'Failed to approve payment');
-                                          } finally {
-                                            setBtnLoading(false);
-                                          }
-                                        }}
-                                        className="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 text-zinc-950 font-bold text-[9px] rounded uppercase tracking-wider transition-colors cursor-pointer shrink-0"
-                                      >
-                                        Approve
-                                      </button>
+                                          }}
+                                          className="px-2 py-0.5 bg-cyan-600 hover:bg-cyan-500 text-zinc-950 font-bold text-[9px] rounded uppercase tracking-wider transition-colors cursor-pointer shrink-0"
+                                        >
+                                          Approve
+                                        </button>
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
+                                </div>
                               </td>
                               <td className="p-3 text-center">
                                 <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${

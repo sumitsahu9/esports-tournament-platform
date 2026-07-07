@@ -32,8 +32,12 @@ export default function SignupPage() {
 
   const nextStep = () => {
     if (step === 1) {
-      if (!name || !email || !password) {
-        setErrorMsg('Please fill in all account credentials');
+      if (!name || !email || !password || !phone) {
+        setErrorMsg('Please fill in all account credentials, including Phone Number.');
+        return;
+      }
+      if (phone.trim().length < 10) {
+        setErrorMsg('WhatsApp Phone Number is mandatory and must be at least 10 digits.');
         return;
       }
       if (password.length < 6) {
@@ -54,6 +58,12 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg(null);
+
+    if (!phone || phone.trim().length < 10) {
+      setErrorMsg('WhatsApp Phone Number is mandatory and must be at least 10 digits.');
+      setLoading(false);
+      return;
+    }
 
     const cleanEmail = email.trim();
 
@@ -248,9 +258,10 @@ export default function SignupPage() {
                       <Phone className="absolute left-3.5 top-3.5 h-4.5 w-4.5 text-zinc-500" />
                       <input
                         type="tel"
+                        required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder="Enter contact number"
+                        placeholder="Enter 10-digit WhatsApp number"
                         className="w-full pl-11 pr-4 py-3 bg-zinc-950/70 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
                       />
                     </div>

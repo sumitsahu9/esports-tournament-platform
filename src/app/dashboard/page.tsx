@@ -1286,6 +1286,12 @@ export default function DashboardPage() {
     setActionLoading(true);
     setFormError(null);
 
+    if (!editPhone || editPhone.trim().length < 10) {
+      setFormError('WhatsApp Phone Number is mandatory and must be at least 10 digits.');
+      setActionLoading(false);
+      return;
+    }
+
     try {
       if (isMockEnabled) {
         if (!user) throw new Error('Unauthorized');
@@ -1826,6 +1832,7 @@ export default function DashboardPage() {
                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Phone / WhatsApp</label>
                   <input
                     type="tel"
+                    required
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
