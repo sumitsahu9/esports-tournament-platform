@@ -58,16 +58,20 @@ interface Withdrawal {
 
 interface Registration {
   id: string;
+  tournament_id: string;
   user_id: string;
   game_id?: string | null;
   ign: string;
   check_in_status?: 'Checked In' | 'Pending' | 'DNQ';
   payment_ref?: string;
+  payment_status?: string;
   member2_ign?: string | null;
   member3_ign?: string | null;
   member4_ign?: string | null;
   profiles?: {
     name: string;
+    email?: string;
+    phone_number?: string | null;
   };
 }
 
@@ -1232,7 +1236,9 @@ export default function AdminPanelPage() {
         const mappedRegs = regs.map((r: any) => ({
           ...r,
           profiles: {
-            name: profilesMap[r.user_id]?.name || 'Player'
+            name: profilesMap[r.user_id]?.name || 'Player',
+            email: profilesMap[r.user_id]?.email || 'no-reply@mock.com',
+            phone_number: profilesMap[r.user_id]?.phone_number || '9999999999'
           }
         }));
         setRegsForSelectedTourney(mappedRegs);
@@ -1241,7 +1247,7 @@ export default function AdminPanelPage() {
       let data = null;
       const { data: joinedData, error: joinError } = await supabase
         .from('registrations')
-        .select('*, profiles(name)')
+        .select('*, profiles(name, email, phone_number)')
         .eq('tournament_id', selectedTourneyId);
 
       if (!joinError && joinedData) {
@@ -1258,7 +1264,7 @@ export default function AdminPanelPage() {
             const userIds = rawRegs.map(r => r.user_id);
             const { data: profilesData } = await supabase
               .from('profiles')
-              .select('id, name')
+              .select('id, name, email, phone_number')
               .in('id', userIds);
 
             const profMap: Record<string, any> = {};
@@ -3103,10 +3109,10 @@ export default function AdminPanelPage() {
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
                           <tr className="border-b border-zinc-900 text-zinc-550 font-bold uppercase bg-zinc-950/40">
-                            <th className="p-3">Player name</th>
+                            <th className="p-3">Player Details</th>
                             <th className="p-3">In-Game IGN</th>
-                            <th className="p-3">Payment Ref</th>
-                            <th className="p-3 text-center">Status</th>
+                            <th className="p-3">Payment Info & Actions</th>
+                            <th className="p-3 text-center">Check-In Status</th>
                             <th className="p-3 text-center">Action</th>
                           </tr>
                         </thead>
@@ -3117,7 +3123,19 @@ export default function AdminPanelPage() {
                             return r.check_in_status === checkInFilter;
                           }).map((r) => (
                             <tr key={r.id} className="text-zinc-350 hover:bg-zinc-900/10">
-                              <td className="p-3 font-semibold text-zinc-200">{r.profiles?.name || 'Player'}</td>
+                              <td className="p-3 font-semibold text-zinc-200">
+                                <div>{r.profiles?.name || 'Player'}</div>
+                                {r.profiles?.email && (
+                                  <div className="text-[10px] text-zinc-500 font-sans mt-0.5 select-all selection:bg-purple-600">
+                                    {r.profiles.email}
+                                  </div>
+                                )}
+                                {r.profiles?.phone_number && (
+                                  <div className="text-[10px] text-zinc-500 font-sans select-all selection:bg-purple-600">
+                                    {r.profiles.phone_number}
+                                  </div>
+                                )}
+                              </td>
                               <td className="p-3 font-mono">
                                 <div>{r.ign} <span className="text-[10px] text-zinc-500 font-sans">(Leader)</span></div>
                                 {(r.member2_ign || r.member3_ign || r.member4_ign) && (
@@ -3128,11 +3146,74 @@ export default function AdminPanelPage() {
                                   </div>
                                 )}
                               </td>
-                              <td className="p-3 font-mono text-zinc-400">
-                                {r.payment_ref ? (
-                                  <span className="text-purple-400 font-bold">{r.payment_ref}</span>
+                              <td className="p-3">
+                                {r.payment_status === 'Paid' ? (
+                                  <div className="space-y-0.5">
+                                    <span className="text-emerald-400 font-bold text-xs flex items-center gap-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Verified Paid
+                                    </span>
+                                    <div className="text-[10px] text-zinc-500 font-mono select-all selection:bg-purple-600">{r.payment_ref}</div>
+                                  </div>
                                 ) : (
-                                  <span className="text-zinc-550">Wallet Balance</span>
+                                  <div className="space-y-2 max-w-[200px]">
+                                    <div className="text-yellow-500 font-bold text-xs flex items-center gap-1">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span> Unpaid/Pending
+                                    </div>
+                                    <div className="text-[9px] text-zinc-550 font-mono select-all">Ref: {r.payment_ref || 'None'}</div>
+                                    <div className="flex gap-1.5 items-center">
+                                      <input
+                                        type="text"
+                                        id={`approve-ref-${r.id}`}
+                                        placeholder="e.g. CFPay_123 or Tx ID"
+                                        className="w-full px-2 py-1 bg-zinc-900 border border-zinc-800 rounded text-[10px] text-zinc-200 focus:outline-none focus:border-cyan-500"
+                                      />
+                                      <button
+                                        onClick={async () => {
+                                          const inputEl = document.getElementById(`approve-ref-${r.id}`) as HTMLInputElement;
+                                          const refId = inputEl?.value?.trim() || r.payment_ref || '';
+                                          if (!confirm(`Are you sure you want to force approve this registration using reference ID "${refId}"?`)) return;
+                                          try {
+                                            setBtnLoading(true);
+                                            if (isMockEnabled) {
+                                              const allRegs = mockDb.getRegistrations();
+                                              const rIdx = allRegs.findIndex((x: any) => x.id === r.id);
+                                              if (rIdx !== -1) {
+                                                allRegs[rIdx].payment_status = 'Paid';
+                                                allRegs[rIdx].check_in_status = 'Checked In';
+                                                allRegs[rIdx].payment_ref = refId;
+                                                mockDb.saveRegistrations(allRegs);
+                                                const tourneyList = mockDb.getTournaments();
+                                                const tIdx = tourneyList.findIndex((t: any) => t.id === r.tournament_id);
+                                                if (tIdx !== -1) {
+                                                  tourneyList[tIdx].filled_slots += 1;
+                                                  mockDb.saveTournaments(tourneyList);
+                                                }
+                                              }
+                                            } else {
+                                              const { data, error } = await supabase.rpc('confirm_registration_payment', {
+                                                p_order_id: refId,
+                                                p_amount: 1.00,
+                                                p_user_id: r.user_id
+                                              });
+                                              if (error) throw error;
+                                              if (data && (data as any).success === false) {
+                                                throw new Error((data as any).message || 'Verification failed');
+                                              }
+                                            }
+                                            alert('Registration payment approved and slot filled successfully!');
+                                            await fetchData();
+                                          } catch (err: any) {
+                                            alert(err.message || 'Failed to approve payment');
+                                          } finally {
+                                            setBtnLoading(false);
+                                          }
+                                        }}
+                                        className="px-2 py-1 bg-cyan-600 hover:bg-cyan-500 text-zinc-950 font-bold text-[9px] rounded uppercase tracking-wider transition-colors cursor-pointer shrink-0"
+                                      >
+                                        Approve
+                                      </button>
+                                    </div>
+                                  </div>
                                 )}
                               </td>
                               <td className="p-3 text-center">
