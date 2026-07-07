@@ -26,7 +26,8 @@ interface JoinedTournament {
   total_slots: number;
   registrations: {
     ign: string;
-    game_id: string;
+    game_id?: string | null;
+    payment_status?: string | null;
   };
 }
 
@@ -1594,18 +1595,30 @@ export default function DashboardPage() {
                       <h3 className="text-lg font-bold text-zinc-100">{t.title}</h3>
                       <div className="text-xs text-zinc-400 mt-1 space-y-1">
                         <div>Mode: <strong>{t.mode}</strong> | Prize Pool: <strong className="text-emerald-400">₹{t.entry_fee > 0 ? (Number(t.entry_fee) * t.total_slots * 0.50).toFixed(0) : t.prize_pool}</strong></div>
-                        <div className="pt-2 border-t border-zinc-950 mt-2 text-[11px]">
-                          Registered IGN: <strong className="text-zinc-200">{t.registrations.ign}</strong> ({t.registrations.game_id})
+                        <div className="pt-2 border-t border-zinc-950 mt-2 text-[11px] space-y-1">
+                          <div>Registered IGN: <strong className="text-zinc-200">{t.registrations.ign}</strong> ({t.registrations.game_id || 'No UID'})</div>
+                          <div>Payment Status: <span className={`font-bold ${t.registrations.payment_status === 'Paid' ? 'text-emerald-450' : 'text-yellow-500'}`}>{t.registrations.payment_status || 'Pending'}</span></div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="pt-4 mt-4 border-t border-zinc-955 flex justify-end">
+                    <div className="pt-4 mt-4 border-t border-zinc-955 flex justify-between items-center">
+                      <div>
+                        {t.registrations.payment_status !== 'Paid' && (
+                          <span className="text-[10px] text-yellow-500 font-bold bg-yellow-950/20 border border-yellow-500/20 px-2 py-0.5 rounded">
+                            ⚠️ Unpaid
+                          </span>
+                        )}
+                      </div>
                       <Link
                         href={`/tournaments/${t.id}`}
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-colors"
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
+                          t.registrations.payment_status !== 'Paid'
+                            ? 'bg-yellow-600 hover:bg-yellow-500 text-black'
+                            : 'bg-purple-600 hover:bg-purple-500 text-white'
+                        }`}
                       >
-                        Enter Lobby page
+                        {t.registrations.payment_status !== 'Paid' ? 'Pay Now & Book Slot' : 'Enter Lobby page'}
                       </Link>
                     </div>
                   </div>

@@ -38,6 +38,8 @@ interface Registration {
   ign: string;
   created_at: string;
   payment_ref?: string;
+  payment_status?: string;
+  check_in_status?: string;
   member2_ign?: string | null;
   member3_ign?: string | null;
   member4_ign?: string | null;
@@ -1060,18 +1062,30 @@ export default function TournamentDetailPage() {
                 {registrations.map((reg, idx) => {
                   const checkedIn = reg.check_in_status === 'Checked In';
                   const dnq = reg.check_in_status === 'DNQ';
+                  const isUnpaidSelf = user && reg.user_id === user.id && reg.payment_status !== 'Paid';
                   return (
                     <div
                       key={reg.id}
                       className={`p-3 rounded-lg border flex items-center justify-between gap-2 text-xs font-semibold ${
                         checkedIn ? 'bg-purple-950/10 border-purple-500/20 text-purple-300' :
                         dnq ? 'bg-zinc-900 border-zinc-950 text-zinc-550 line-through' :
+                        isUnpaidSelf ? 'bg-yellow-950/10 border-yellow-500/20 text-yellow-550' :
                         'bg-zinc-950/60 border-zinc-900 text-zinc-300'
                       }`}
                     >
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="text-zinc-650">#{idx + 1}</span>
-                        <span className="truncate" title={reg.ign}>{reg.ign}</span>
+                      <div className="flex flex-col gap-1 truncate w-full">
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="text-zinc-650">#{idx + 1}</span>
+                          <span className="truncate" title={reg.ign}>{reg.ign}</span>
+                        </div>
+                        {isUnpaidSelf && (
+                          <button
+                            onClick={() => setShowJoinModal(true)}
+                            className="text-[10px] text-left text-yellow-400 hover:text-yellow-350 hover:underline flex items-center gap-1 font-bold pt-0.5 cursor-pointer"
+                          >
+                            ⚠️ Click to Pay Now
+                          </button>
+                        )}
                       </div>
                       <span className="text-[8px] font-black tracking-widest uppercase">
                         {reg.check_in_status || 'Pending'}
