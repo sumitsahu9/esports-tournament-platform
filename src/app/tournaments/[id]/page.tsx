@@ -27,16 +27,20 @@ interface Tournament {
   status: 'Upcoming' | 'Live' | 'Completed';
   room_published: boolean;
   payment_link?: string;
+  registrations_closed?: boolean;
 }
 
 interface Registration {
   id: string;
   tournament_id: string;
   user_id: string;
-  game_id: string;
+  game_id?: string | null;
   ign: string;
   created_at: string;
   payment_ref?: string;
+  member2_ign?: string | null;
+  member3_ign?: string | null;
+  member4_ign?: string | null;
   profiles?: {
     name: string;
   };
@@ -69,6 +73,9 @@ export default function TournamentDetailPage() {
   const [paymentRefInput, setPaymentRefInput] = useState('');
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [manualOrderIdInput, setManualOrderIdInput] = useState('');
+  const [member2Input, setMember2Input] = useState('');
+  const [member3Input, setMember3Input] = useState('');
+  const [member4Input, setMember4Input] = useState('');
 
   const handleManualVerify = async (orderId: string) => {
     if (!orderId) {
@@ -632,8 +639,25 @@ export default function TournamentDetailPage() {
 
   const handleJoinTournament = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!gameIdInput || !ignInput) {
-      alert('Please fill in both fields');
+    const mode = tournament?.mode || 'Solo';
+
+    if (!ignInput) {
+      alert('Please enter Leader/Player In-Game Name (IGN)');
+      return;
+    }
+
+    if (mode === 'Solo' && !gameIdInput) {
+      alert('Please enter your Game ID / UID');
+      return;
+    }
+
+    if ((mode === 'Squad' || mode === 'Duo') && !member2Input) {
+      alert('Please enter Member 2 In-Game Name (IGN)');
+      return;
+    }
+
+    if (mode === 'Squad' && (!member3Input || !member4Input)) {
+      alert('Please enter In-Game Names (IGN) for all 4 team members');
       return;
     }
 
@@ -658,8 +682,11 @@ export default function TournamentDetailPage() {
             id: regId,
             tournament_id: id,
             user_id: user.id,
-            game_id: gameIdInput,
+            game_id: gameIdInput || null,
             ign: ignInput,
+            member2_ign: (mode === 'Squad' || mode === 'Duo') ? member2Input : null,
+            member3_ign: mode === 'Squad' ? member3Input : null,
+            member4_ign: mode === 'Squad' ? member4Input : null,
             coupon_discount: discountAmount,
             check_in_status: 'Checked In',
             created_at: new Date().toISOString()
@@ -676,9 +703,12 @@ export default function TournamentDetailPage() {
         } else {
           const { error } = await supabase.rpc('register_via_payment_link', {
             p_tournament_id: id,
-            p_game_id: gameIdInput,
+            p_game_id: gameIdInput || null,
             p_ign: ignInput,
-            p_payment_ref: 'Free Coupon'
+            p_payment_ref: 'Free Coupon',
+            p_member2_ign: (mode === 'Squad' || mode === 'Duo') ? member2Input : null,
+            p_member3_ign: mode === 'Squad' ? member3Input : null,
+            p_member4_ign: mode === 'Squad' ? member4Input : null
           });
           if (error) throw error;
         }
@@ -688,6 +718,11 @@ export default function TournamentDetailPage() {
         setAppliedCoupon(null);
         setCouponInput('');
         setDiscountAmount(0);
+        setGameIdInput('');
+        setIgnInput('');
+        setMember2Input('');
+        setMember3Input('');
+        setMember4Input('');
         await fetchAllData();
         return;
       }
@@ -700,7 +735,7 @@ export default function TournamentDetailPage() {
         if (tIdx === -1) throw new Error('Tournament not found');
         const tourney = tourneyList[tIdx];
 
-        if (tourney.status !== 'Upcoming') {
+        if (tourney.status !== 'Upcoming' || tourney.registrations_closed) {
           throw new Error('Registrations are closed for this tournament');
         }
         if (tourney.filled_slots >= tourney.total_slots) {
@@ -716,16 +751,22 @@ export default function TournamentDetailPage() {
           }
           // Update credentials and order ID for retry
           allRegs[existingRegIdx].payment_ref = orderId;
-          allRegs[existingRegIdx].game_id = gameIdInput;
+          allRegs[existingRegIdx].game_id = gameIdInput || null;
           allRegs[existingRegIdx].ign = ignInput;
+          allRegs[existingRegIdx].member2_ign = (mode === 'Squad' || mode === 'Duo') ? member2Input : null;
+          allRegs[existingRegIdx].member3_ign = mode === 'Squad' ? member3Input : null;
+          allRegs[existingRegIdx].member4_ign = mode === 'Squad' ? member4Input : null;
           allRegs[existingRegIdx].created_at = new Date().toISOString();
         } else {
           allRegs.push({
             id: `reg-${Date.now()}`,
             tournament_id: id,
             user_id: user.id,
-            game_id: gameIdInput,
+            game_id: gameIdInput || null,
             ign: ignInput,
+            member2_ign: (mode === 'Squad' || mode === 'Duo') ? member2Input : null,
+            member3_ign: mode === 'Squad' ? member3Input : null,
+            member4_ign: mode === 'Squad' ? member4Input : null,
             coupon_discount: discountAmount,
             check_in_status: 'Pending',
             payment_status: 'Pending',
@@ -737,9 +778,12 @@ export default function TournamentDetailPage() {
       } else {
         const { error } = await supabase.rpc('create_pending_registration', {
           p_tournament_id: id,
-          p_game_id: gameIdInput,
+          p_game_id: gameIdInput || null,
           p_ign: ignInput,
-          p_order_id: orderId
+          p_order_id: orderId,
+          p_member2_ign: (mode === 'Squad' || mode === 'Duo') ? member2Input : null,
+          p_member3_ign: mode === 'Squad' ? member3Input : null,
+          p_member4_ign: mode === 'Squad' ? member4Input : null
         });
         if (error) throw error;
       }
@@ -1196,10 +1240,10 @@ export default function TournamentDetailPage() {
               ) : (
                 <button
                   onClick={() => setShowJoinModal(true)}
-                  disabled={tournament.filled_slots >= tournament.total_slots}
+                  disabled={tournament.filled_slots >= tournament.total_slots || tournament.registrations_closed}
                   className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:from-zinc-800 disabled:to-zinc-800 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(147,51,234,0.3)] text-sm flex items-center justify-center cursor-pointer"
                 >
-                  {tournament.filled_slots >= tournament.total_slots ? 'Lobby Full' : 'Book Your Slot'}
+                  {tournament.registrations_closed ? 'Registrations Closed' : tournament.filled_slots >= tournament.total_slots ? 'Lobby Full' : 'Book Your Slot'}
                 </button>
               )}
             </div>
@@ -1234,24 +1278,10 @@ export default function TournamentDetailPage() {
               )}
 
               <form onSubmit={handleJoinTournament} className="space-y-4">
+                {/* Leader/Player IGN */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    {isBGMI ? 'BGMI UID' : 'Free Fire UID'}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={gameIdInput}
-                    onChange={(e) => setGameIdInput(e.target.value)}
-                    placeholder={isBGMI ? 'e.g. 5124792341' : 'e.g. 84291845'}
-                    className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
-                  />
-                </div>
-
-                {/* In Game Name (IGN) */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    In Game Name (IGN)
+                    {tournament.mode === 'Solo' ? 'In Game Name (IGN)' : 'Leader In Game Name (IGN)'}
                   </label>
                   <input
                     type="text"
@@ -1262,6 +1292,69 @@ export default function TournamentDetailPage() {
                     className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
                   />
                 </div>
+
+                {/* Leader/Player UID */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                    {tournament.mode === 'Solo' ? (isBGMI ? 'BGMI UID' : 'Free Fire UID') : (isBGMI ? 'Leader BGMI UID (Optional)' : 'Leader Free Fire UID (Optional)')}
+                  </label>
+                  <input
+                    type="text"
+                    required={tournament.mode === 'Solo'}
+                    value={gameIdInput}
+                    onChange={(e) => setGameIdInput(e.target.value)}
+                    placeholder={isBGMI ? 'e.g. 5124792341' : 'e.g. 84291845'}
+                    className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                  />
+                </div>
+
+                {/* Duo / Squad extra members */}
+                {(tournament.mode === 'Squad' || tournament.mode === 'Duo') && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                      Member 2 In Game Name (IGN)
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={member2Input}
+                      onChange={(e) => setMember2Input(e.target.value)}
+                      placeholder="e.g. 〆MASH・VIPER"
+                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                    />
+                  </div>
+                )}
+
+                {tournament.mode === 'Squad' && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                        Member 3 In Game Name (IGN)
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={member3Input}
+                        onChange={(e) => setMember3Input(e.target.value)}
+                        placeholder="e.g. 〆MASH・SHADOW"
+                        className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-850 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                        Member 4 In Game Name (IGN)
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={member4Input}
+                        onChange={(e) => setMember4Input(e.target.value)}
+                        placeholder="e.g. 〆MASH・GHOST"
+                        className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-850 rounded-lg focus:border-purple-500/50 focus:outline-none text-sm text-zinc-100 transition-colors"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Coupon Code Input */}
                 <div className="space-y-1">

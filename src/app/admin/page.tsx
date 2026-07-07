@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShieldAlert, ShieldCheck, Users, Trophy, Wallet, 
   Trash2, Edit, Plus, Check, X, Megaphone, Loader2, Calendar, Gamepad2,
-  MessageSquare, Send, RefreshCw, UserCheck, Skull
+  MessageSquare, Send, RefreshCw, UserCheck, Skull, Lock, Unlock
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -36,6 +36,7 @@ interface Tournament {
   status: 'Upcoming' | 'Live' | 'Completed';
   room_published: boolean;
   payment_link?: string;
+  registrations_closed?: boolean;
 }
 
 interface Withdrawal {
@@ -58,10 +59,13 @@ interface Withdrawal {
 interface Registration {
   id: string;
   user_id: string;
-  game_id: string;
+  game_id?: string | null;
   ign: string;
   check_in_status?: 'Checked In' | 'Pending' | 'DNQ';
   payment_ref?: string;
+  member2_ign?: string | null;
+  member3_ign?: string | null;
+  member4_ign?: string | null;
   profiles?: {
     name: string;
   };
@@ -163,6 +167,7 @@ export default function AdminPanelPage() {
   const [editStatus, setEditStatus] = useState<'Upcoming' | 'Live' | 'Completed'>('Upcoming');
   const [tourneyPaymentLink, setTourneyPaymentLink] = useState('');
   const [editPaymentLink, setEditPaymentLink] = useState('');
+  const [editRegistrationsClosed, setEditRegistrationsClosed] = useState(false);
 
   // Support Tickets states
   const [adminTickets, setAdminTickets] = useState<any[]>([]);
@@ -233,6 +238,7 @@ export default function AdminPanelPage() {
     setEditRules(t.rules || '');
     setEditStatus(t.status);
     setEditPaymentLink(t.payment_link || '');
+    setEditRegistrationsClosed(!!t.registrations_closed);
   };
 
   const handleEditTournament = async (e: React.FormEvent) => {
@@ -285,7 +291,8 @@ export default function AdminPanelPage() {
             prize_pool: calculatedPool,
             rules: editRules,
             status: editStatus,
-            payment_link: editPaymentLink.trim() || undefined
+            payment_link: editPaymentLink.trim() || undefined,
+            registrations_closed: editRegistrationsClosed
           };
           mockDb.saveTournaments(list);
         }
@@ -308,7 +315,8 @@ export default function AdminPanelPage() {
           prize_pool: calculatedPool,
           rules: editRules,
           status: editStatus,
-          payment_link: editPaymentLink.trim() || null
+          payment_link: editPaymentLink.trim() || null,
+          registrations_closed: editRegistrationsClosed
         })
         .eq('id', editingTournament.id);
 
@@ -1673,6 +1681,30 @@ export default function AdminPanelPage() {
     }
   };
 
+  const handleToggleRegistrations = async (tid: string, currentVal: boolean) => {
+    try {
+      const newVal = !currentVal;
+      if (isMockEnabled) {
+        const tourneyList = mockDb.getTournaments();
+        const tIdx = tourneyList.findIndex((t: any) => t.id === tid);
+        if (tIdx !== -1) {
+          tourneyList[tIdx].registrations_closed = newVal;
+          mockDb.saveTournaments(tourneyList);
+        }
+      } else {
+        const { error } = await supabase
+          .from('tournaments')
+          .update({ registrations_closed: newVal })
+          .eq('id', tid);
+        if (error) throw error;
+      }
+      alert(`Registrations ${newVal ? 'closed' : 'opened'} successfully!`);
+      await fetchData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to update registration status');
+    }
+  };
+
   const handlePublishRoomDetails = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!publishTourneyId || !roomIdInput || !roomPasswordInput) return;
@@ -2442,6 +2474,17 @@ export default function AdminPanelPage() {
                             </td>
                             <td className="p-4 text-center flex items-center justify-center gap-2">
                               <button
+                                onClick={() => handleToggleRegistrations(t.id, !!t.registrations_closed)}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  t.registrations_closed 
+                                    ? 'text-red-400 hover:text-red-300 hover:bg-red-950/20' 
+                                    : 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/20'
+                                }`}
+                                title={t.registrations_closed ? "Open Registrations" : "Close Registrations"}
+                              >
+                                {t.registrations_closed ? <Lock className="w-4.5 h-4.5" /> : <Unlock className="w-4.5 h-4.5" />}
+                              </button>
+                              <button
                                 onClick={() => startEditTournament(t)}
                                 className="p-1.5 text-zinc-500 hover:text-cyan-400 hover:bg-cyan-950/20 rounded-lg transition-colors"
                                 title="Edit Tournament"
@@ -3075,7 +3118,16 @@ export default function AdminPanelPage() {
                           }).map((r) => (
                             <tr key={r.id} className="text-zinc-350 hover:bg-zinc-900/10">
                               <td className="p-3 font-semibold text-zinc-200">{r.profiles?.name || 'Player'}</td>
-                              <td className="p-3 font-mono">{r.ign}</td>
+                              <td className="p-3 font-mono">
+                                <div>{r.ign} <span className="text-[10px] text-zinc-500 font-sans">(Leader)</span></div>
+                                {(r.member2_ign || r.member3_ign || r.member4_ign) && (
+                                  <div className="text-[10px] text-zinc-500 mt-1 space-y-0.5 pl-2 border-l border-zinc-800">
+                                    {r.member2_ign && <div>• {r.member2_ign}</div>}
+                                    {r.member3_ign && <div>• {r.member3_ign}</div>}
+                                    {r.member4_ign && <div>• {r.member4_ign}</div>}
+                                  </div>
+                                )}
+                              </td>
                               <td className="p-3 font-mono text-zinc-400">
                                 {r.payment_ref ? (
                                   <span className="text-purple-400 font-bold">{r.payment_ref}</span>
@@ -4095,6 +4147,20 @@ export default function AdminPanelPage() {
                     placeholder="e.g. https://pay.cashfree.com/order/..."
                     className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-cyan-500/50 focus:outline-none text-sm text-zinc-100"
                   />
+                </div>
+
+                {/* Registrations Closed Checkbox */}
+                <div className="flex items-center gap-2.5 pt-1">
+                  <input
+                    type="checkbox"
+                    id="editRegistrationsClosed"
+                    checked={editRegistrationsClosed}
+                    onChange={(e) => setEditRegistrationsClosed(e.target.checked)}
+                    className="w-4 h-4 rounded bg-zinc-950 border border-zinc-800 text-cyan-500 focus:ring-cyan-500/20 focus:outline-none cursor-pointer"
+                  />
+                  <label htmlFor="editRegistrationsClosed" className="text-xs font-bold text-zinc-300 cursor-pointer select-none">
+                    Close Registrations (Disable checkout & booking)
+                  </label>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-3">
