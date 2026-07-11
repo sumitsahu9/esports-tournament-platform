@@ -577,7 +577,7 @@ export default function LandingPage() {
               href="/dashboard"
               className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-[0_0_25px_rgba(147,51,234,0.45)] hover:shadow-[0_0_35px_rgba(147,51,234,0.65)] transition-all flex items-center justify-center gap-2 group border border-purple-400/20 text-base"
             >
-              Join Tournaments
+              Dashboard
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <a
@@ -931,16 +931,15 @@ export default function LandingPage() {
             How It Works
           </h2>
           <p className="text-sm sm:text-base text-zinc-400 max-w-lg mx-auto mb-16">
-            Get started in 5 simple steps. Zero complexities.
+            Get started in 4 simple steps. Zero complexities.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-8 relative">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
             {[
               { step: '1', title: 'Register', desc: 'Create a free profile and add your BGMI/Free Fire game IDs.' },
-              { step: '2', title: 'Deposit Funds', desc: 'Add mock funds securely into your personal gaming wallet.' },
-              { step: '3', title: 'Join Lobby', desc: 'Find a match, pay the entry fee, and reserve your tournament slot.' },
-              { step: '4', title: 'Receive Code', desc: 'Receive Room ID and password in your dashboard 15 mins prior.' },
-              { step: '5', title: 'Win & Payout', desc: 'Score kills or chicken dinner, get prizes credited, and withdraw.' }
+              { step: '2', title: 'Join Lobby', desc: 'Find a match, pay the entry fee, and reserve your tournament slot.' },
+              { step: '3', title: 'Receive Code', desc: 'Receive Room ID and password in your dashboard 15 mins prior.' },
+              { step: '4', title: 'Win & Payout', desc: 'Score kills or chicken dinner, get prizes credited, and withdraw.' }
             ].map((s, idx) => (
               <div key={s.step} className="flex flex-col items-center space-y-4 relative z-10">
                 <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xl font-black text-purple-400 shadow-[0_0_15px_rgba(147,51,234,0.1)]">
